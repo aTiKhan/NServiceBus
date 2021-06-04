@@ -79,11 +79,11 @@
             if (incomingMessage.GetMessageIntent() == MessageIntentEnum.Subscribe)
             {
                 var messageType = new MessageType(messageTypeString);
-                await subscriptionStorage.Subscribe(subscriber, messageType, context.Extensions).ConfigureAwait(false);
+                await subscriptionStorage.Subscribe(subscriber, messageType, context.Extensions, context.CancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            await subscriptionStorage.Unsubscribe(subscriber, new MessageType(messageTypeString), context.Extensions).ConfigureAwait(false);
+            await subscriptionStorage.Unsubscribe(subscriber, new MessageType(messageTypeString), context.Extensions, context.CancellationToken).ConfigureAwait(false);
         }
 
         static string GetSubscriptionMessageTypeFrom(IncomingMessage msg)
@@ -96,14 +96,5 @@
         readonly ISubscriptionStorage subscriptionStorage;
 
         static readonly ILog Logger = LogManager.GetLogger<SubscriptionReceiverBehavior>();
-
-        public class Registration : RegisterStep
-        {
-            public Registration()
-                : base("ProcessSubscriptionRequests", typeof(SubscriptionReceiverBehavior), "Check for subscription messages and execute the requested behavior to subscribe or unsubscribe.")
-            {
-                InsertAfterIfExists("ExecuteUnitOfWork");
-            }
-        }
     }
 }

@@ -5,7 +5,6 @@
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
     using EndpointTemplates;
-    using Features;
     using NServiceBus.Sagas;
     using NUnit.Framework;
 
@@ -35,20 +34,25 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(MessageToSaga), typeof(ReceiverWithSaga));
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MessageToSaga), typeof(ReceiverWithSaga));
                 });
             }
 
             public class ReplyHandler : IHandleMessages<Reply>
             {
-                public Context Context { get; set; }
+                public ReplyHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(Reply message, IMessageHandlerContext context)
                 {
-                    Context.ReplyReceived = true;
+                    testContext.ReplyReceived = true;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -56,7 +60,7 @@
         {
             public ReceiverWithSaga()
             {
-                EndpointSetup<DefaultServer>(c => c.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class NotFoundHandlerSaga1 : Saga<NotFoundHandlerSaga1.NotFoundHandlerSaga1Data>, IAmStartedByMessages<StartSaga1>, IHandleMessages<MessageToSaga>

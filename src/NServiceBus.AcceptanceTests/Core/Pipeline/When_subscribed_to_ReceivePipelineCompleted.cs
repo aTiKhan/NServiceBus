@@ -36,7 +36,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.Pipeline.OnReceivePipelineCompleted(e =>
+                    c.Pipeline.OnReceivePipelineCompleted((e, _) =>
                     {
                         var testContext = (Context)c.GetSettings().Get<ScenarioContext>();
                         testContext.ReceivePipelineCompletedMessage = e;
@@ -48,13 +48,18 @@
 
             class SomeMessageHandler : IHandleMessages<SomeMessage>
             {
-                public Context TestContext { get; set; }
+                public SomeMessageHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(SomeMessage message, IMessageHandlerContext context)
                 {
-                    TestContext.MessageId = context.MessageId;
+                    testContext.MessageId = context.MessageId;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

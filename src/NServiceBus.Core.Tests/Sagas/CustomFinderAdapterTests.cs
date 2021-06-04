@@ -1,13 +1,15 @@
 ﻿namespace NServiceBus.Core.Tests.Sagas
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
+    using Fakes;
+    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.Persistence;
     using NServiceBus.Sagas;
     using NUnit.Framework;
-    using System;
-    using System.Collections.Generic;
-    using Testing;
 
     [TestFixture]
     public class CustomFinderAdapterTests
@@ -22,10 +24,9 @@
 
             var messageType = typeof(StartSagaMessage);
 
-            var messageConventions = new Conventions
-            {
-                IsCommandTypeAction = t => t == messageType
-            };
+            var messageConventions = new Conventions();
+
+            messageConventions.DefineCommandTypeConventions(t => t == messageType);
 
             var sagaMetadata = SagaMetadata.Create(typeof(TestSaga), availableTypes, messageConventions);
 
@@ -34,13 +35,12 @@
                 throw new Exception("Finder not found");
             }
 
-            var builder = new FakeBuilder();
-
-            builder.Register(() => new ReturnsNullFinder());
+            var services = new ServiceCollection();
+            services.AddTransient(sp => new ReturnsNullFinder());
 
             var customerFinderAdapter = new CustomFinderAdapter<TestSaga.SagaData, StartSagaMessage>();
 
-            Assert.That(async () => await customerFinderAdapter.Find(builder, finderDefinition, new InMemorySynchronizedStorageSession(), new ContextBag(), new StartSagaMessage()),
+            Assert.That(async () => await customerFinderAdapter.Find(services.BuildServiceProvider(), finderDefinition, new FakeSynchronizedStorageSession(), new ContextBag(), new StartSagaMessage(), new Dictionary<string, string>()),
                 Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
         }
     }
@@ -57,7 +57,7 @@
 
         public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
         {
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 
@@ -66,7 +66,7 @@
 
     class ReturnsNullFinder : IFindSagas<TestSaga.SagaData>.Using<StartSagaMessage>
     {
-        public Task<TestSaga.SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+        public Task<TestSaga.SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
         {
             return null;
         }

@@ -1,7 +1,9 @@
 namespace NServiceBus.Features
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.DataBus;
     using Settings;
 
@@ -35,7 +37,7 @@ namespace NServiceBus.Features
                 context.Container.ConfigureComponent<DefaultDataBusSerializer>(DependencyLifecycle.SingleInstance);
             }
 
-            context.RegisterStartupTask(b => new IDataBusInitializer(b.Build<IDataBus>()));
+            context.RegisterStartupTask(b => new IDataBusInitializer(b.GetRequiredService<IDataBus>()));
 
             var conventions = context.Settings.Get<Conventions>();
             context.Pipeline.Register(new DataBusReceiveBehavior.Registration(conventions));
@@ -51,14 +53,14 @@ namespace NServiceBus.Features
                 this.dataBus = dataBus;
             }
 
-            protected override Task OnStart(IMessageSession session)
+            protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
             {
-                return dataBus.Start();
+                return dataBus.Start(cancellationToken);
             }
 
-            protected override Task OnStop(IMessageSession session)
+            protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
     }

@@ -39,8 +39,7 @@
             {
                 EndpointSetup<DefaultServer>(config =>
                 {
-                    config.EnableFeature<TimeoutManager>();
-                    config.UsePersistence<InMemoryPersistence>();
+                    config.UsePersistence<AcceptanceTestingPersistence>();
                     config.GetSettings().Set<ISagaIdGenerator>(new CustomSagaIdGenerator());
                 });
             }
@@ -67,12 +66,15 @@
             public class CustomSagaIdSaga : Saga<CustomSagaIdSaga.CustomSagaIdSagaData>,
                 IAmStartedByMessages<StartSaga>
             {
-                public Context TestContext { get; set; }
+                public CustomSagaIdSaga(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(StartSaga message, IMessageHandlerContext context)
                 {
                     Data.CustomerId = message.CustomerId;
-                    TestContext.SagaId = Data.Id;
+                    testContext.SagaId = Data.Id;
 
                     return Task.FromResult(0);
                 }
@@ -87,9 +89,7 @@
                     public virtual string CustomerId { get; set; }
                 }
 
-                public class TimeHasPassed
-                {
-                }
+                Context testContext;
             }
         }
 

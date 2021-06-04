@@ -1,12 +1,11 @@
 ﻿namespace NServiceBus.Core.Tests.Features
 {
     using System;
-    using System.Collections.Generic;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus.Features;
     using NUnit.Framework;
-    using ObjectBuilder;
     using Settings;
 
     [TestFixture]
@@ -73,26 +72,34 @@
         }
 
         [Test]
-        public void Should_not_throw_when_feature_task_fails_on_start_and_abort_starting()
+        public void Should_throw_when_feature_task_fails_on_start_and_should_stop_previously_started_tasks_and_should_abort_starting()
         {
-            var feature1 = new FeatureWithStartupTaskThatThrows(throwOnStart: true, throwOnStop: false);
-            var feature2 = new FeatureWithStartupTaskThatThrows(throwOnStart: false, throwOnStop: false);
+            var feature1 = new FeatureWithStartupTaskThatThrows(throwOnStop: true, createException: () => new InvalidOperationException("feature1"));
+            var feature2 = new FeatureWithStartupTaskThatThrows(throwOnStart: true, createException: () => new InvalidOperationException("feature2"));
+            var feature3 = new FeatureWithStartupTaskThatThrows();
+
             featureSettings.Add(feature1);
             featureSettings.Add(feature2);
+            featureSettings.Add(feature3);
 
             featureSettings.SetupFeatures(new FakeFeatureConfigurationContext());
 
-            Assert.ThrowsAsync<InvalidOperationException>(async () => await featureSettings.StartFeatures(null, null));
+            var exception = Assert.ThrowsAsync<InvalidOperationException>(async () => await featureSettings.StartFeatures(null, null));
+            Assert.AreEqual("feature2", exception.Message);
 
-            Assert.False(feature1.TaskStarted && feature1.TaskStopped);
-            Assert.False(feature2.TaskStarted && feature2.TaskStopped);
+            Assert.True(feature1.TaskStarted, "Feature 1 should have been started.");
+            Assert.True(feature2.TaskStartCalled, "An attempt should have been made to start feature 2.");
+            Assert.True(feature1.TaskStopCalled, "An attempt should have been made to stop feature 1.");
+            Assert.False(feature2.TaskStopCalled, "No attempt should have been made to stop feature 2.");
+            Assert.False(feature3.TaskStartCalled, "No attempt should have been made to start feature 3.");
         }
 
         [Test]
-        public async Task Should_not_throw_when_feature_task_fails_on_stop_and_not_abort_stopping()
+        public async Task Should_not_throw_when_feature_task_fails_on_stop_and_should_not_abort_stopping()
         {
             var feature1 = new FeatureWithStartupTaskThatThrows(throwOnStart: false, throwOnStop: false);
             var feature2 = new FeatureWithStartupTaskThatThrows(throwOnStart: false, throwOnStop: true);
+
             featureSettings.Add(feature1);
             featureSettings.Add(feature2);
 
@@ -101,6 +108,7 @@
             await featureSettings.StartFeatures(null, null);
 
             Assert.DoesNotThrowAsync(async () => await featureSettings.StopFeatures());
+
             Assert.True(feature1.TaskStarted && feature1.TaskStopped);
             Assert.True(feature2.TaskStarted && !feature2.TaskStopped);
         }
@@ -144,16 +152,16 @@
                     this.orderBuilder = orderBuilder;
                 }
 
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     orderBuilder.AppendLine($"{nameof(FeatureWithStartupTaskWithDependency)}.Start");
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     orderBuilder.AppendLine($"{nameof(FeatureWithStartupTaskWithDependency)}.Stop");
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
                 StringBuilder orderBuilder;
@@ -183,16 +191,16 @@
                     this.orderBuilder = orderBuilder;
                 }
 
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     orderBuilder.AppendLine($"{nameof(FeatureWithStartupThatAnotherFeatureDependsOn)}.Start");
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     orderBuilder.AppendLine($"{nameof(FeatureWithStartupThatAnotherFeatureDependsOn)}.Stop");
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
                 StringBuilder orderBuilder;
@@ -223,16 +231,16 @@
                     this.parentFeature = parentFeature;
                 }
 
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     parentFeature.TaskStarted = true;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     parentFeature.TaskStopped = true;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
                 FeatureWithStartupTask parentFeature;
@@ -241,15 +249,18 @@
 
         class FeatureWithStartupTaskThatThrows : TestFeature
         {
-            public FeatureWithStartupTaskThatThrows(bool throwOnStart = false, bool throwOnStop = false)
+            public FeatureWithStartupTaskThatThrows(bool throwOnStart = false, bool throwOnStop = false, Func<Exception> createException = null)
             {
                 this.throwOnStart = throwOnStart;
                 this.throwOnStop = throwOnStop;
+                this.createException = createException ?? (() => new InvalidOperationException());
 
                 EnableByDefault();
             }
 
+            public bool TaskStartCalled { get; private set; }
             public bool TaskStarted { get; private set; }
+            public bool TaskStopCalled { get; private set; }
             public bool TaskStopped { get; private set; }
             public bool TaskDisposed { get; private set; }
 
@@ -260,6 +271,7 @@
 
             bool throwOnStart;
             bool throwOnStop;
+            Func<Exception> createException;
 
             public class Runner : FeatureStartupTask, IDisposable
             {
@@ -273,23 +285,31 @@
                     parentFeature.TaskDisposed = true;
                 }
 
-                protected override async Task OnStart(IMessageSession session)
+                protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
+                    parentFeature.TaskStartCalled = true;
+
                     await Task.Yield();
+
                     if (parentFeature.throwOnStart)
                     {
-                        throw new InvalidOperationException();
+                        throw parentFeature.createException();
                     }
+
                     parentFeature.TaskStarted = true;
                 }
 
-                protected override async Task OnStop(IMessageSession session)
+                protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
+                    parentFeature.TaskStopCalled = true;
+
                     await Task.Yield();
+
                     if (parentFeature.throwOnStop)
                     {
-                        throw new InvalidOperationException();
+                        throw parentFeature.createException();
                     }
+
                     parentFeature.TaskStopped = true;
                 }
 
@@ -323,14 +343,14 @@
                     parentFeature.TaskDisposed = true;
                 }
 
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
                 FeatureWithStartupTaskWhichIsDisposable parentFeature;
@@ -338,59 +358,20 @@
         }
     }
 
-    public class FakeBuilder : IBuilder
+    public class FakeBuilder : IServiceProvider
     {
-        public FakeBuilder()
-        {
-        }
-
         public FakeBuilder(Type type)
         {
             this.type = type;
         }
 
-        public void Dispose()
+        public object GetService(Type serviceType)
         {
-            throw new NotImplementedException();
-        }
-
-        public object Build(Type typeToBuild)
-        {
-            if (typeToBuild != type)
+            if (serviceType != type)
             {
                 throw new Exception("Not the expected type");
             }
-            return Activator.CreateInstance(typeToBuild);
-        }
-
-        public IBuilder CreateChildBuilder()
-        {
-            throw new NotImplementedException();
-        }
-
-        public T Build<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<T> BuildAll<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<object> BuildAll(Type typeToBuild)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Release(object instance)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void BuildAndDispatch(Type typeToBuild, Action<object> action)
-        {
-            throw new NotImplementedException();
+            return Activator.CreateInstance(serviceType);
         }
 
         Type type;

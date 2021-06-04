@@ -1,13 +1,12 @@
 namespace NServiceBus
 {
+    using Transport;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Transactions;
     using Configuration.AdvancedExtensibility;
-    using Container;
-    using ObjectBuilder;
-    using ObjectBuilder.Common;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using Settings;
 
@@ -58,7 +57,7 @@ namespace NServiceBus
         /// <summary>
         /// Used to configure components in the container.
         /// </summary>
-        public void RegisterComponents(Action<IConfigureComponents> registration)
+        public void RegisterComponents(Action<IServiceCollection> registration)
         {
             Guard.AgainstNull(nameof(registration), registration);
 
@@ -82,39 +81,14 @@ namespace NServiceBus
         }
 
         /// <summary>
-        /// Defines a custom builder to use.
+        /// Configures NServiceBus to use the given transport.
         /// </summary>
-        /// <typeparam name="T">The builder type of the <see cref="ContainerDefinition" />.</typeparam>
-        public void UseContainer<T>(Action<ContainerCustomizations> customizations = null) where T : ContainerDefinition, new()
+        public RoutingSettings<TTransport> UseTransport<TTransport>(TTransport transportDefinition)
+            where TTransport : TransportDefinition
         {
-            customizations?.Invoke(new ContainerCustomizations(Settings));
-
-            UseContainer(typeof(T));
+            Settings.Get<TransportSeam.Settings>().TransportDefinition = transportDefinition;
+            return new RoutingSettings<TTransport>(Settings);
         }
-
-        /// <summary>
-        /// Defines a custom builder to use.
-        /// </summary>
-        /// <param name="definitionType">The type of the <see cref="ContainerDefinition" />.</param>
-        public void UseContainer(Type definitionType)
-        {
-            Guard.AgainstNull(nameof(definitionType), definitionType);
-            Guard.TypeHasDefaultConstructor(definitionType, nameof(definitionType));
-
-            Settings.Get<HostingComponent.Settings>().CustomObjectBuilder = definitionType.Construct<ContainerDefinition>().CreateContainer(Settings);
-        }
-
-        /// <summary>
-        /// Uses an already active instance of a builder.
-        /// </summary>
-        /// <param name="builder">The instance to use.</param>
-        public void UseContainer(IContainer builder)
-        {
-            Guard.AgainstNull(nameof(builder), builder);
-
-            Settings.Get<HostingComponent.Settings>().CustomObjectBuilder = builder;
-        }
-
         //This needs to be here since we have downstreams that use reflection to access this property
         internal void TypesToScanInternal(IEnumerable<Type> typesToScan)
         {
@@ -162,17 +136,10 @@ namespace NServiceBus
 
         static void ForAllTypes<T>(IEnumerable<Type> types, Action<Type> action) where T : class
         {
-            // ReSharper disable HeapView.SlowDelegateCreation
             foreach (var type in types.Where(t => typeof(T).IsAssignableFrom(t) && !(t.IsAbstract || t.IsInterface)))
             {
                 action(type);
             }
-            // ReSharper restore HeapView.SlowDelegateCreation
-        }
-
-        static bool IsIWantToRunBeforeConfigurationIsFinalized(Type type)
-        {
-            return typeof(IWantToRunBeforeConfigurationIsFinalized).IsAssignableFrom(type);
         }
     }
 }

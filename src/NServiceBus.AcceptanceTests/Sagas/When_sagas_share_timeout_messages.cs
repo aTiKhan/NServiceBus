@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_sagas_share_timeout_messages : NServiceBusAcceptanceTest
@@ -12,6 +11,8 @@
         [Test]
         public async Task Should_invoke_instance_that_requested_the_timeout()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(e => e.When(s => s.SendLocal(new StartSagaMessage
                 {
@@ -34,17 +35,17 @@
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(c =>
-                {
-                    c.EnableFeature<TimeoutManager>();
-                });
+                EndpointSetup<DefaultServer>();
             }
 
             public class TimeoutSharingSaga1 : Saga<TimeoutSharingSaga1.TimeoutSharingSagaData1>,
                 IAmStartedByMessages<StartSagaMessage>,
                 IHandleTimeouts<MySagaTimeout>
             {
-                public Context Context { get; set; }
+                public TimeoutSharingSaga1(Context context)
+                {
+                    testContext = context;
+                }
 
                 protected override void ConfigureHowToFindSaga(SagaPropertyMapper<TimeoutSharingSagaData1> mapper)
                 {
@@ -58,7 +59,7 @@
 
                 public Task Timeout(MySagaTimeout state, IMessageHandlerContext context)
                 {
-                    Context.Saga1ReceivedTimeout = true;
+                    testContext.Saga1ReceivedTimeout = true;
                     return Task.FromResult(0);
                 }
 
@@ -67,11 +68,15 @@
                     public virtual string CorrelationProperty { get; set; }
                 }
 
+                Context testContext;
             }
 
             public class TimeoutSharingSaga2 : Saga<TimeoutSharingSaga2.TimeoutSharingSagaData2>, IAmStartedByMessages<StartSagaMessage>, IHandleTimeouts<MySagaTimeout>
             {
-                public Context Context { get; set; }
+                public TimeoutSharingSaga2(Context context)
+                {
+                    testContext = context;
+                }
 
                 protected override void ConfigureHowToFindSaga(SagaPropertyMapper<TimeoutSharingSagaData2> mapper)
                 {
@@ -85,13 +90,15 @@
 
                 public Task Timeout(MySagaTimeout state, IMessageHandlerContext context)
                 {
-                    Context.Saga2ReceivedTimeout = true;
+                    testContext.Saga2ReceivedTimeout = true;
                     return Task.FromResult(0);
                 }
                 public class TimeoutSharingSagaData2 : ContainSagaData
                 {
                     public virtual string CorrelationProperty { get; set; }
                 }
+
+                Context testContext;
             }
         }
 

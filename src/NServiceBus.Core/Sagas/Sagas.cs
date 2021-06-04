@@ -3,9 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.Sagas;
-    using ObjectBuilder;
-    using Transport;
 
     /// <summary>
     /// Used to configure saga.
@@ -29,6 +28,7 @@
 
             Defaults(s => s.Set(new SagaMetadataCollection()));
 
+            Prerequisite(context => !context.Settings.GetOrDefault<bool>("Endpoint.SendOnly"), "Sagas are only relevant for endpoints receiving messages.");
             Prerequisite(config => config.Settings.GetAvailableTypes().Any(IsSagaType), "No sagas were found in the scanned types");
         }
 
@@ -47,6 +47,13 @@
             var sagaMetaModel = context.Settings.Get<SagaMetadataCollection>();
             sagaMetaModel.Initialize(context.Settings.GetAvailableTypes(), conventions);
 
+            var verifyIfEntitiesAreShared = !context.Settings.GetOrDefault<bool>(SagaSettings.DisableVerifyingIfEntitiesAreShared);
+
+            if (verifyIfEntitiesAreShared)
+            {
+                sagaMetaModel.VerifyIfEntitiesAreShared();
+            }
+
             RegisterCustomFindersInContainer(context.Container, sagaMetaModel);
 
             foreach (var t in context.Settings.GetAvailableTypes())
@@ -58,12 +65,12 @@
             }
 
             // Register the Saga related behaviors for incoming messages
-            context.Pipeline.Register("InvokeSaga", b => new SagaPersistenceBehavior(b.Build<ISagaPersister>(), sagaIdGenerator, b.Build<ICancelDeferredMessages>(), sagaMetaModel), "Invokes the saga logic");
+            context.Pipeline.Register("InvokeSaga", b => new SagaPersistenceBehavior(b.GetRequiredService<ISagaPersister>(), sagaIdGenerator, sagaMetaModel), "Invokes the saga logic");
             context.Pipeline.Register("InvokeSagaNotFound", new InvokeSagaNotFoundBehavior(), "Invokes saga not found logic");
             context.Pipeline.Register("AttachSagaDetailsToOutGoingMessage", new AttachSagaDetailsToOutGoingMessageBehavior(), "Makes sure that outgoing messages have saga info attached to them");
         }
 
-        static void RegisterCustomFindersInContainer(IConfigureComponents container, IEnumerable<SagaMetadata> sagaMetaModel)
+        static void RegisterCustomFindersInContainer(IServiceCollection container, IEnumerable<SagaMetadata> sagaMetaModel)
         {
             foreach (var finder in sagaMetaModel.SelectMany(m => m.Finders))
             {

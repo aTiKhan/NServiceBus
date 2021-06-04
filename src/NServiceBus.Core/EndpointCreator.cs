@@ -1,10 +1,11 @@
 namespace NServiceBus
 {
+    using System;
     using System.Linq;
     using Features;
     using MessageInterfaces;
     using MessageInterfaces.MessageMapper.Reflection;
-    using ObjectBuilder;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using Settings;
     using Unicast.Messages;
@@ -22,18 +23,18 @@ namespace NServiceBus
         {
             var endpointCreator = new EndpointCreator(settings, hostingConfiguration, settings.Get<Conventions>());
 
-            endpointCreator.Initialize();
+            endpointCreator.Configure();
 
             return endpointCreator;
         }
 
-        void Initialize()
+        void Configure()
         {
             ConfigureMessageTypes();
 
             var pipelineSettings = settings.Get<PipelineSettings>();
 
-            hostingConfiguration.Container.RegisterSingleton<ReadOnlySettings>(settings);
+            hostingConfiguration.Services.AddSingleton(typeof(ReadOnlySettings), settings);
 
             featureComponent = new FeatureComponent(settings);
 
@@ -44,6 +45,7 @@ namespace NServiceBus
             transportSeam = TransportSeam.Create(settings.Get<TransportSeam.Settings>(), hostingConfiguration);
 
             var receiveConfiguration = ReceiveComponent.PrepareConfiguration(
+                hostingConfiguration,
                 settings.Get<ReceiveComponent.Settings>(),
                 transportSeam);
 
@@ -54,11 +56,9 @@ namespace NServiceBus
 
             recoverabilityComponent = new RecoverabilityComponent(settings);
 
-            var featureConfigurationContext = new FeatureConfigurationContext(settings, hostingConfiguration.Container, pipelineSettings, routingConfiguration, receiveConfiguration);
+            var featureConfigurationContext = new FeatureConfigurationContext(settings, hostingConfiguration.Services, pipelineSettings, routingConfiguration, receiveConfiguration);
 
             featureComponent.Initalize(featureConfigurationContext);
-
-            hostingConfiguration.CreateHostInformationForV7BackwardsCompatibility();
 
             recoverabilityComponent.Initialize(receiveConfiguration, hostingConfiguration, transportSeam);
 
@@ -69,11 +69,11 @@ namespace NServiceBus
                 settings.Get<Conventions>(),
                 pipelineSettings);
 
-            sendComponent = SendComponent.Initialize(pipelineSettings, hostingConfiguration, routingComponent, messageMapper, transportSeam);
+            sendComponent = SendComponent.Initialize(pipelineSettings, hostingConfiguration, routingComponent, messageMapper);
 
-            hostingConfiguration.Container.ConfigureComponent(b => settings.Get<Notifications>(), DependencyLifecycle.SingleInstance);
+            hostingConfiguration.Services.ConfigureComponent(b => settings.Get<Notifications>(), DependencyLifecycle.SingleInstance);
 
-            receiveComponent = ReceiveComponent.Initialize(
+            receiveComponent = ReceiveComponent.Configure(
                 receiveConfiguration,
                 settings.ErrorQueueAddress(),
                 hostingConfiguration,
@@ -84,6 +84,9 @@ namespace NServiceBus
             // The settings can only be locked after initializing the feature component since it uses the settings to store & share feature state.
             // As well as all the other components have been initialized
             settings.PreventChanges();
+
+            // The pipeline settings can be locked after the endpoint is configured. It prevents end users from modyfing pipeline after an endpoint has started.
+            pipelineSettings.PreventChanges();
 
             settings.AddStartupDiagnosticsSection("Endpoint",
                 new
@@ -108,17 +111,18 @@ namespace NServiceBus
             settings.AddStartupDiagnosticsSection("Messages", new
             {
                 CustomConventionUsed = conventions.CustomMessageTypeConventionUsed,
+                MessageConventions = conventions.RegisteredConventions,
                 NumberOfMessagesFoundAtStartup = foundMessages.Count,
                 Messages = foundMessages.Select(m => m.MessageType.FullName)
             });
         }
 
-        public IStartableEndpoint CreateStartableEndpoint(IBuilder builder, HostingComponent hostingComponent)
+        public IStartableEndpoint CreateStartableEndpoint(IServiceProvider builder, HostingComponent hostingComponent)
         {
             return new StartableEndpoint(settings,
                 featureComponent,
                 receiveComponent,
-                transportSeam.TransportInfrastructure,
+                transportSeam,
                 pipelineComponent,
                 recoverabilityComponent,
                 hostingComponent,

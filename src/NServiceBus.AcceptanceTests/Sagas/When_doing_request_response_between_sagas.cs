@@ -4,7 +4,6 @@ namespace NServiceBus.AcceptanceTests.Sagas
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_doing_request_response_between_sagas : NServiceBusAcceptanceTest
@@ -29,26 +28,29 @@ namespace NServiceBus.AcceptanceTests.Sagas
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class RequestResponseRequestingSaga1 : Saga<RequestResponseRequestingSaga1.RequestResponseRequestingSagaData1>,
                 IAmStartedByMessages<InitiateRequestingSaga>,
                 IHandleMessages<ResponseFromOtherSaga>
             {
-                public Context TestContext { get; set; }
+                public RequestResponseRequestingSaga1(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(InitiateRequestingSaga message, IMessageHandlerContext context)
                 {
                     return context.SendLocal(new RequestToRespondingSaga
                     {
-                        SomeId = Guid.NewGuid() 
+                        SomeId = Guid.NewGuid()
                     });
                 }
 
                 public Task Handle(ResponseFromOtherSaga message, IMessageHandlerContext context)
                 {
-                    TestContext.DidRequestingSagaGetTheResponse = true;
+                    testContext.DidRequestingSagaGetTheResponse = true;
 
                     MarkAsComplete();
 
@@ -63,8 +65,10 @@ namespace NServiceBus.AcceptanceTests.Sagas
 
                 public class RequestResponseRequestingSagaData1 : ContainSagaData
                 {
-                    public virtual Guid CorrIdForResponse { get; set; } 
+                    public virtual Guid CorrIdForResponse { get; set; }
                 }
+
+                Context testContext;
             }
 
             public class RequestResponseRespondingSaga1 : Saga<RequestResponseRespondingSaga1.RequestResponseRespondingSagaData1>,
@@ -77,7 +81,7 @@ namespace NServiceBus.AcceptanceTests.Sagas
                     // Both reply and reply to originator work here since the sender of the incoming message is the requesting saga
                     // we explicitly set the correlation ID to a non-existent saga since auto correlation happens to work for this special case
                     // where we reply from the first handler
-                    return context.Reply(new ResponseFromOtherSaga{SomeCorrelationId = Guid.NewGuid()});
+                    return context.Reply(new ResponseFromOtherSaga { SomeCorrelationId = Guid.NewGuid() });
                 }
 
                 protected override void ConfigureHowToFindSaga(SagaPropertyMapper<RequestResponseRespondingSagaData1> mapper)

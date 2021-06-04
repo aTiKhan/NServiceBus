@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NServiceBus.Sagas;
     using NUnit.Framework;
 
@@ -14,6 +13,8 @@
         [Test]
         public async Task It_should_not_invoke_SagaNotFound_handler()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })
                 .WithEndpoint<Endpoint>(b => b.When((session, c) => session.SendLocal(new StartSaga1
                 {
@@ -41,7 +42,6 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.EnableFeature<TimeoutManager>();
                     c.ExecuteTheseHandlersFirst(typeof(CatchAllMessageHandler));
                     c.Recoverability().Immediate(immediate => immediate.NumberOfRetries(5));
                 });
@@ -52,11 +52,14 @@
                 IHandleTimeouts<Saga1Timeout>,
                 IHandleTimeouts<Saga2Timeout>
             {
-                public Context TestContext { get; set; }
+                public MultiTimeoutsSaga1(Context context)
+                {
+                    testContext = context;
+                }
 
                 public async Task Handle(StartSaga1 message, IMessageHandlerContext context)
                 {
-                    if (message.ContextId != TestContext.Id)
+                    if (message.ContextId != testContext.Id)
                     {
                         return;
                     }
@@ -65,22 +68,22 @@
 
                     await RequestTimeout(context, TimeSpan.FromMilliseconds(1), new Saga1Timeout
                     {
-                        ContextId = TestContext.Id
+                        ContextId = testContext.Id
                     });
                     await RequestTimeout(context, TimeSpan.FromMilliseconds(1), new Saga2Timeout
                     {
-                        ContextId = TestContext.Id
+                        ContextId = testContext.Id
                     });
                 }
 
                 public Task Timeout(Saga1Timeout state, IMessageHandlerContext context)
                 {
-                    if (state.ContextId == TestContext.Id)
+                    if (state.ContextId == testContext.Id)
                     {
-                        TestContext.Saga1TimeoutFired = true;
+                        testContext.Saga1TimeoutFired = true;
                     }
 
-                    if (TestContext.Saga1TimeoutFired && TestContext.Saga2TimeoutFired)
+                    if (testContext.Saga1TimeoutFired && testContext.Saga2TimeoutFired)
                     {
                         MarkAsComplete();
                     }
@@ -89,12 +92,12 @@
 
                 public Task Timeout(Saga2Timeout state, IMessageHandlerContext context)
                 {
-                    if (state.ContextId == TestContext.Id)
+                    if (state.ContextId == testContext.Id)
                     {
-                        TestContext.Saga2TimeoutFired = true;
+                        testContext.Saga2TimeoutFired = true;
                     }
 
-                    if (TestContext.Saga1TimeoutFired && TestContext.Saga2TimeoutFired)
+                    if (testContext.Saga1TimeoutFired && testContext.Saga2TimeoutFired)
                     {
                         MarkAsComplete();
                     }
@@ -111,6 +114,8 @@
                 {
                     public virtual Guid ContextId { get; set; }
                 }
+
+                Context testContext;
             }
 
             public class SagaNotFound : IHandleSagaNotFound
@@ -119,7 +124,7 @@
 
                 public Task Handle(object message, IMessageProcessingContext context)
                 {
-                    if (((dynamic) message).ContextId != TestContext.Id)
+                    if (((dynamic)message).ContextId != TestContext.Id)
                     {
                         return Task.FromResult(0);
                     }

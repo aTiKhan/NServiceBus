@@ -23,12 +23,14 @@
                 typeof(MyMessage)
             });
 
-            var context = new TestableOutgoingLogicalMessageContext();
-            context.Message = new OutgoingLogicalMessage(typeof(MyMessage), new MyMessage());
+            var context = new TestableOutgoingLogicalMessageContext
+            {
+                Message = new OutgoingLogicalMessage(typeof(MyMessage), new MyMessage())
+            };
 
             var behavior = new SerializeMessageConnector(new FakeSerializer("myContentType"), registry);
 
-            await behavior.Invoke(context, c => TaskEx.CompletedTask);
+            await behavior.Invoke(context, c => Task.CompletedTask);
 
             Assert.AreEqual("myContentType", context.Headers[Headers.ContentType]);
         }

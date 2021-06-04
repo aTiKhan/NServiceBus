@@ -3,8 +3,8 @@ namespace NServiceBus.Features
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
-    using ObjectBuilder;
     using Settings;
 
     class FeatureActivator
@@ -14,10 +14,7 @@ namespace NServiceBus.Features
             this.settings = settings;
         }
 
-        internal List<FeatureDiagnosticData> Status
-        {
-            get { return features.Select(f => f.Diagnostics).ToList(); }
-        }
+        internal List<FeatureDiagnosticData> Status => features.Select(f => f.Diagnostics).ToList();
 
         public void Add(Feature feature)
         {
@@ -60,23 +57,38 @@ namespace NServiceBus.Features
             return features.Select(t => t.Diagnostics).ToArray();
         }
 
-        public async Task StartFeatures(IBuilder builder, IMessageSession session)
+        public async Task StartFeatures(IServiceProvider builder, IMessageSession session, CancellationToken cancellationToken = default)
         {
+            var startedTaskControllers = new List<FeatureStartupTaskController>();
+
             // sequential starting of startup tasks is intended, introducing concurrency here could break a lot of features.
             foreach (var feature in enabledFeatures.Where(f => f.Feature.IsActive))
             {
                 foreach (var taskController in feature.TaskControllers)
                 {
-                    await taskController.Start(builder, session).ConfigureAwait(false);
+                    try
+                    {
+                        await taskController.Start(builder, session, cancellationToken).ConfigureAwait(false);
+                    }
+#pragma warning disable PS0019 // Do not catch Exception without considering OperationCanceledException - OCE handling is the same
+                    catch (Exception)
+#pragma warning restore PS0019 // Do not catch Exception without considering OperationCanceledException
+                    {
+                        await Task.WhenAll(startedTaskControllers.Select(controller => controller.Stop(cancellationToken))).ConfigureAwait(false);
+
+                        throw;
+                    }
+
+                    startedTaskControllers.Add(taskController);
                 }
             }
         }
 
-        public Task StopFeatures()
+        public Task StopFeatures(CancellationToken cancellationToken = default)
         {
             var featureStopTasks = enabledFeatures.Where(f => f.Feature.IsActive)
                 .SelectMany(f => f.TaskControllers)
-                .Select(task => task.Stop());
+                .Select(task => task.Stop(cancellationToken));
 
             return Task.WhenAll(featureStopTasks);
         }

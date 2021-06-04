@@ -12,7 +12,7 @@
         public async Task Should_receive_the_message()
         {
             var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })
-                .WithEndpoint<Endpoint>(b => b.When(async(session, c) =>
+                .WithEndpoint<Endpoint>(b => b.When(async (session, c) =>
                 {
                     await session.SendLocal<MyMessage>(m => m.Id = c.Id);
                     await session.SendLocal<IMyInterfaceMessage>(m => m.Id = c.Id);
@@ -51,36 +51,46 @@
 
         public class MyMessageHandler : IHandleMessages<MyMessage>
         {
-            public Context Context { get; set; }
+            public MyMessageHandler(Context context)
+            {
+                testContext = context;
+            }
 
             public Task Handle(MyMessage message, IMessageHandlerContext context)
             {
-                if (Context.Id != message.Id)
+                if (testContext.Id != message.Id)
                 {
                     return Task.FromResult(0);
                 }
 
-                Context.MessageClassReceived = true;
+                testContext.MessageClassReceived = true;
 
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
 
         public class MyMessageInterfaceHandler : IHandleMessages<IMyInterfaceMessage>
         {
-            public Context Context { get; set; }
+            public MyMessageInterfaceHandler(Context context)
+            {
+                testContext = context;
+            }
 
             public Task Handle(IMyInterfaceMessage interfaceMessage, IMessageHandlerContext context)
             {
-                if (Context.Id != interfaceMessage.Id)
+                if (testContext.Id != interfaceMessage.Id)
                 {
                     return Task.FromResult(0);
                 }
 
-                Context.MessageInterfaceReceived = true;
+                testContext.MessageInterfaceReceived = true;
 
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
     }
 }

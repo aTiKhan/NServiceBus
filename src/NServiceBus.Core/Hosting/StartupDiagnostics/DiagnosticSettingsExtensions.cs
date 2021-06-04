@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Configuration.AdvancedExtensibility;
     using Settings;
@@ -8,7 +9,7 @@
     /// <summary>
     /// Provides an API to add startup diagnostics.
     /// </summary>
-    public static class DiagnosticSettingsExtensions
+    public static partial class DiagnosticSettingsExtensions
     {
         /// <summary>
         /// Adds a section to the startup diagnostics.
@@ -42,7 +43,7 @@
         /// </summary>
         /// <param name="config">Configuration object to extend.</param>
         /// <param name="customDiagnosticsWriter">Func responsible for writing diagnostics data.</param>
-        public static void CustomDiagnosticsWriter(this EndpointConfiguration config, Func<string, Task> customDiagnosticsWriter)
+        public static void CustomDiagnosticsWriter(this EndpointConfiguration config, Func<string, CancellationToken, Task> customDiagnosticsWriter)
         {
             Guard.AgainstNull(nameof(config), config);
             Guard.AgainstNull(nameof(customDiagnosticsWriter), customDiagnosticsWriter);

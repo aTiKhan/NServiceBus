@@ -1,10 +1,10 @@
 namespace NServiceBus.Core.Tests.Timeout
 {
+    using System.Threading;
     using System.Threading.Tasks;
-    using Extensibility;
     using Transport;
 
-    public class FakeMessageDispatcher : IDispatchMessages
+    public class FakeMessageDispatcher : IMessageDispatcher
     {
         public int MessagesSent
         {
@@ -12,10 +12,10 @@ namespace NServiceBus.Core.Tests.Timeout
             set { messagesSent = value; }
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transportTransaction, ContextBag context)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transportTransaction, CancellationToken cancellationToken = default)
         {
             MessagesSent += outgoingMessages.MulticastTransportOperations.Count + outgoingMessages.UnicastTransportOperations.Count;
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
         volatile int messagesSent;

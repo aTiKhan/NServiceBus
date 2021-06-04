@@ -13,12 +13,6 @@ If you see the build failing, check that you haven't put the source of NServiceB
 
 NServiceBus is licensed under the RPL 1.5 license. More details can be found [here](LICENSE.md).
 
-### [LightInject](http://www.lightinject.net/) 
-
-LightInject is licensed under the MIT license as described [here](https://github.com/seesharper/LightInject/blob/master/license.md).
-
-LightInject sources are compiled into the NServiceBus distribution as allowed under the license terms found [here](https://github.com/seesharper/LightInject/blob/master/license.md).
-
 ### [SimpleJson](https://github.com/facebook-csharp-sdk/simple-json/) 
 
 SimpleJson is licensed under the MIT license as described [here](https://github.com/facebook-csharp-sdk/simple-json/blob/master/LICENSE.txt).

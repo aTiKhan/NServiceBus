@@ -10,16 +10,17 @@
 
         bool SupportsNativePubSub { get; }
 
-        bool SupportsNativeDeferral { get; }
+        bool SupportsDelayedDelivery { get; }
 
         bool SupportsOutbox { get; }
+
+        bool SupportsPurgeOnStartup { get; }
 
         IConfigureEndpointTestExecution CreateTransportConfiguration();
 
         IConfigureEndpointTestExecution CreatePersistenceConfiguration();
     }
 
-    // ReSharper disable once PartialTypeWithSinglePart
     public partial class TestSuiteConstraints : ITestSuiteConstraints
     {
         public static TestSuiteConstraints Current = new TestSuiteConstraints();

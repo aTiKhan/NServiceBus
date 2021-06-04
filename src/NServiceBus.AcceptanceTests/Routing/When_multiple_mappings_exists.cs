@@ -34,7 +34,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var routing = c.ConfigureTransport().Routing();
+                    var routing = c.ConfigureRouting();
                     routing.RouteToEndpoint(typeof(MyCommand1), typeof(Receiver1));
                     routing.RouteToEndpoint(typeof(MyCommand2), typeof(Receiver2));
                 });
@@ -50,13 +50,18 @@
 
             public class MyMessageHandler : IHandleMessages<MyBaseCommand>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyBaseCommand message, IMessageHandlerContext context)
                 {
-                    Context.WasCalled1 = true;
+                    testContext.WasCalled1 = true;
                     return Task.Delay(2000); // Just to be sure the other receiver is finished
                 }
+
+                Context testContext;
             }
         }
 
@@ -69,13 +74,18 @@
 
             public class MyMessageHandler : IHandleMessages<MyBaseCommand>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyBaseCommand message, IMessageHandlerContext context)
                 {
-                    Context.WasCalled2 = true;
+                    testContext.WasCalled2 = true;
                     return Task.Delay(2000); // Just to be sure the other receiver is finished
                 }
+
+                Context testContext;
             }
         }
 

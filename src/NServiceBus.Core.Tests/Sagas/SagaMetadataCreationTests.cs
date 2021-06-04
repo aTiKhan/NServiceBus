@@ -3,8 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
+    using NServiceBus;
     using NServiceBus.Persistence;
     using NServiceBus.Sagas;
     using NUnit.Framework;
@@ -82,15 +84,17 @@
             Assert.AreEqual("UniqueProperty", correlatedProperty.Name);
         }
 
-        [Test]
-        public void AutomaticallyAddUniqueForMappedProperties()
+        [TestCase(typeof(MySagaWithMappedProperty))]
+        [TestCase(typeof(MySagaWithMappedHeader))]
+        public void AutomaticallyAddUniqueForMappedProperties(Type sagaType)
         {
-            var metadata = SagaMetadata.Create(typeof(MySagaWithMappedProperty));
+            var metadata = SagaMetadata.Create(sagaType);
             Assert.True(metadata.TryGetCorrelationProperty(out var correlatedProperty));
             Assert.AreEqual("UniqueProperty", correlatedProperty.Name);
         }
 
-        [Test, Ignore("Not sure we should enforce this yet")]
+        [Test]
+        [Ignore("Not sure we should enforce this yet")]
         public void RequireFinderForMessagesStartingTheSaga()
         {
             var ex = Assert.Throws<Exception>(() => SagaMetadata.Create(typeof(MySagaWithUnmappedStartProperty)));
@@ -136,6 +140,19 @@
         }
 
         [Test]
+        public void DetectAndRegisterHeaderFinders()
+        {
+            var metadata = SagaMetadata.Create(typeof(MySagaWithMappedHeader));
+
+            var finder = GetFinder(metadata, typeof(SomeMessage).FullName);
+
+            Assert.AreEqual(typeof(HeaderPropertySagaFinder<MySagaWithMappedHeader.SagaData>), finder.Type);
+            Assert.AreEqual("CorrelationHeader", finder.Properties["message-header-name"]);
+            Assert.AreEqual("UniqueProperty", finder.Properties["saga-property-name"]);
+            Assert.AreEqual(typeof(int), finder.Properties["saga-property-type"]);
+        }
+
+        [Test]
         public void ValidateThatMappingOnSagaIdHasTypeGuidForMessageProps()
         {
             var ex = Assert.Throws<InvalidOperationException>(() => SagaMetadata.Create(typeof(SagaWithIdMappedToNonGuidMessageProperty)));
@@ -160,7 +177,7 @@
         public void ValidateThatMappingOnSagaIdHasTypeGuidForMessageFields()
         {
             var ex = Assert.Throws<InvalidOperationException>(() => SagaMetadata.Create(typeof(SagaWithIdMappedToNonGuidMessageField)));
-            StringAssert.Contains(typeof(SomeMessage).Name, ex.Message);
+            StringAssert.Contains(nameof(SomeMessage), ex.Message);
         }
 
         [Test]
@@ -185,10 +202,11 @@
             Assert.AreEqual(typeof(MySagaWithScannedFinder.CustomFinder), finder.Properties["custom-finder-clr-type"]);
         }
 
-        [Test]
-        public void ValidateThrowsWhenSagaMapsMessageItDoesntHandle()
+        [TestCase(typeof(SagaThatMapsMessageItDoesntHandle))]
+        [TestCase(typeof(SagaThatMapsHeaderFromMessageItDoesntHandle))]
+        public void ValidateThrowsWhenSagaMapsMessageItDoesntHandle(Type sagaType)
         {
-            var ex = Assert.Throws<Exception>(() => SagaMetadata.Create(typeof(SagaThatMapsMessageItDoesntHandle)));
+            var ex = Assert.Throws<Exception>(() => SagaMetadata.Create(sagaType));
 
             Assert.That(ex.Message.Contains("does not handle that message") && ex.Message.Contains("in the ConfigureHowToFindSaga method"));
         }
@@ -259,7 +277,7 @@
         {
             public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -274,7 +292,7 @@
 
             public class Finder : IFindSagas<SagaData>.Using<StartSagaMessage>
             {
-                public Task<SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public Task<SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(default(SagaData));
                 }
@@ -291,7 +309,7 @@
         {
             public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -306,7 +324,7 @@
 
             public class Finder : IFindSagas<SagaData>.Using<StartSagaMessage>
             {
-                public Task<SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public Task<SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(default(SagaData));
                 }
@@ -323,7 +341,7 @@
         {
             public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -339,7 +357,7 @@
 
             public class Finder : IFindSagas<SagaData>.Using<StartSagaMessage>
             {
-                public Task<SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public Task<SagaData> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(default(SagaData));
                 }
@@ -389,6 +407,25 @@
             }
         }
 
+        class MySagaWithMappedHeader : Saga<MySagaWithMappedHeader.SagaData>, IAmStartedByMessages<SomeMessage>
+        {
+            public Task Handle(SomeMessage message, IMessageHandlerContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
+            {
+                mapper.ConfigureHeaderMapping<SomeMessage>("CorrelationHeader")
+                    .ToSaga(s => s.UniqueProperty);
+            }
+
+            public class SagaData : ContainSagaData
+            {
+                public int UniqueProperty { get; set; }
+            }
+        }
+
         class StartMessage
         {
         }
@@ -399,12 +436,12 @@
         {
             public Task Handle(MessageThatStartsTheSaga message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             public Task Handle(MessageThatDoesNotStartTheSaga message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -451,7 +488,7 @@
 
             public Task Timeout(MyTimeout state, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -501,7 +538,7 @@
 
             public Task Handle(SomeMessageWithStringProperty message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -521,7 +558,7 @@
 
             public Task Handle(SomeMessageWithStringProperty message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -530,7 +567,7 @@
         {
             public Task Handle(SomeMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -549,7 +586,7 @@
         {
             public Task Handle(SomeMessageWithField message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -568,7 +605,7 @@
         {
             public Task Handle(SomeMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -587,7 +624,7 @@
         {
             public Task Handle(SomeMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
@@ -601,7 +638,7 @@
 
             internal class CustomFinder : IFindSagas<SagaData>.Using<SomeMessage>
             {
-                public Task<SagaData> FindBy(SomeMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public Task<SagaData> FindBy(SomeMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(default(SagaData));
                 }
@@ -657,6 +694,30 @@
             }
         }
 
+        class SagaThatMapsHeaderFromMessageItDoesntHandle : Saga<SagaThatMapsHeaderFromMessageItDoesntHandle.SagaData>,
+            IAmStartedByMessages<SomeMessage>
+        {
+            protected override void ConfigureHowToFindSaga(SagaPropertyMapper<SagaData> mapper)
+            {
+                mapper.ConfigureMapping<SomeMessage>(msg => msg.SomeProperty).ToSaga(saga => saga.SomeProperty);
+                mapper.ConfigureMapping<OtherMessage>(msg => msg.SomeProperty).ToSaga(saga => saga.SomeProperty);
+            }
+
+            public Task Handle(SomeMessage message, IMessageHandlerContext context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public class SagaData : ContainSagaData
+            {
+                public int SomeProperty { get; set; }
+            }
+
+            public class OtherMessage : IMessage
+            {
+                public int SomeProperty { get; set; }
+            }
+        }
         class SagaWithCustomFinderForMessageItDoesntHandle : Saga<SagaWithCustomFinderForMessageItDoesntHandle.SagaData>,
             IAmStartedByMessages<SomeMessage>
         {
@@ -672,7 +733,7 @@
 
             public class Finder : IFindSagas<SagaData>.Using<OtherMessage>
             {
-                public Task<SagaData> FindBy(OtherMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public Task<SagaData> FindBy(OtherMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(default(SagaData));
                 }

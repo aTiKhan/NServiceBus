@@ -7,7 +7,6 @@
     using System.Runtime.CompilerServices;
     using NServiceBus.Features;
     using NServiceBus.Logging;
-    using NServiceBus.Pipeline;
     using NUnit.Framework;
 
     [TestFixture]
@@ -43,17 +42,17 @@
                     !x.FullName.Contains("System") &&
                     !x.FullName.Contains("JetBrains") &&
                     !x.FullName.StartsWith("Newtonsoft.Json") &&
-                    !x.FullName.StartsWith("LightInject") &&
                     !x.FullName.StartsWith("SimpleJson") &&
                     !x.FullName.StartsWith("FastExpressionCompiler") &&
                     x.Name != "GitVersionInformation" &&
                     x.Namespace != "Particular.Licensing" &&
                     x.Namespace != "NServiceBus.Features" &&
-                    x.Name != "ProcessedByFody" &&
-                    x.Namespace != "NServiceBus").ToList();
+                    x.Name != "NServiceBusCore_ProcessedByFody" &&
+                    x.Namespace != "NServiceBus" &&
+                    x.Namespace != "MicrosoftExtensionsDependencyInjection").ToList();
             if (types.Count > 0)
             {
-                Assert.IsEmpty(types, $"Non public types should have 'NServiceBus' namespace{Environment.NewLine}{string.Join(Environment.NewLine, types.Select(x => x.FullName))}");
+                Assert.IsEmpty(types, $"Non-public types should have 'NServiceBus' namespace{Environment.NewLine}{string.Join(Environment.NewLine, types.Select(x => x.FullName))}");
             }
         }
 
@@ -100,7 +99,7 @@
         static IEnumerable<Type> GetBehaviors()
         {
             return typeof(Endpoint).Assembly.GetTypes()
-                .Where(type => type.GetInterfaces().Any(face => face.Name == typeof(IBehavior).Name) && !type.IsAbstract && !type.IsGenericType);
+                .Where(type => type.GetInterfaces().Any(face => face.Name == nameof(NServiceBus.Pipeline.IBehavior)) && !type.IsAbstract && !type.IsGenericType);
         }
         static IEnumerable<Type> GetFeatures()
         {
@@ -117,7 +116,7 @@
                                !type.Namespace.Contains("log4net") &&
                                //Ignore Newtonsoft attributes
                                !type.Namespace.Contains("Newtonsoft") &&
-                               //Ignore Resharper annotations
+                               //Ignore JetBrains annotations
                                !type.Namespace.Contains("JetBrains") &&
                                //Ignore LightInject attributes
                                !type.Namespace.Contains("LightInject") &&

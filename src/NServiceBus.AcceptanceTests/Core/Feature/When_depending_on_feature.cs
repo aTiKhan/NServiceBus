@@ -1,10 +1,12 @@
 ﻿namespace NServiceBus.AcceptanceTests.Core.Feature
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
     using Features;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     public class When_depending_on_feature : NServiceBusAcceptanceTest
@@ -49,8 +51,8 @@
 
             protected override void Setup(FeatureConfigurationContext context)
             {
-                context.Container.ConfigureComponent<Runner>(DependencyLifecycle.SingleInstance);
-                context.RegisterStartupTask(b => b.Build<Runner>());
+                context.Services.AddSingleton<Runner>();
+                context.RegisterStartupTask(b => b.GetService<Runner>());
             }
 
             class Runner : FeatureStartupTask
@@ -61,13 +63,13 @@
                 {
                     this.dependency = dependency;
                 }
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     dependency.Start();
                     return Task.FromResult(0);
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     dependency.Stop();
                     return Task.FromResult(0);
@@ -79,10 +81,9 @@
         {
             protected override void Setup(FeatureConfigurationContext context)
             {
-                context.Container.ConfigureComponent<Dependency>(DependencyLifecycle.SingleInstance);
-
-                context.Container.ConfigureComponent<Runner>(DependencyLifecycle.SingleInstance);
-                context.RegisterStartupTask(b => b.Build<Runner>());
+                context.Services.AddSingleton<Dependency>();
+                context.Services.AddSingleton<Runner>();
+                context.RegisterStartupTask(b => b.GetService<Runner>());
             }
 
             class Runner : FeatureStartupTask
@@ -93,13 +94,13 @@
                 {
                     this.dependency = dependency;
                 }
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     dependency.Initialize();
                     return Task.FromResult(0);
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(0);
                 }

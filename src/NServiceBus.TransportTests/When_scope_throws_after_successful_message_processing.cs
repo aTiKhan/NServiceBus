@@ -14,31 +14,31 @@
         [TestCase(TransportTransactionMode.TransactionScope)]
         public async Task Throwing_during_Transaction_Prepare_should_properly_increment_immediate_processing_failures(TransportTransactionMode transactionMode)
         {
-            var onErrorCalled = new TaskCompletionSource<ErrorContext>();
-
-            OnTestTimeout(() => onErrorCalled.SetCanceled());
+            var secondFailure = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                context =>
+                (_, __) =>
                 {
                     Transaction.Current.EnlistDurable(EnlistmentWhichFailsDuringPrepare.Id, new EnlistmentWhichFailsDuringPrepare(), EnlistmentOptions.None);
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 },
-                context =>
+                (context, _) =>
                 {
                     //perform an immediate retry to make sure the transport increments the counter properly
                     if (context.ImmediateProcessingFailures < 2)
                     {
                         return Task.FromResult(ErrorHandleResult.RetryRequired);
                     }
-                    onErrorCalled.SetResult(context);
+
+                    secondFailure.SetResult(context);
 
                     return Task.FromResult(ErrorHandleResult.Handled);
-                }, transactionMode);
+                },
+                transactionMode);
 
             await SendMessage(InputQueueName);
 
-            var errorContext = await onErrorCalled.Task;
+            var errorContext = await secondFailure.Task;
 
             Assert.IsInstanceOf<TransactionAbortedException>(errorContext.Exception);
             Assert.LessOrEqual(2, errorContext.ImmediateProcessingFailures);
@@ -49,25 +49,13 @@
     {
         public static readonly Guid Id = Guid.NewGuid();
 
-        public void Prepare(PreparingEnlistment preparingEnlistment)
-        {
-            // fail during prepare, this will cause scope.Complete to throw
-            preparingEnlistment.ForceRollback();
-        }
+        // fail during prepare, this will cause scope.Complete to throw
+        public void Prepare(PreparingEnlistment preparingEnlistment) => preparingEnlistment.ForceRollback();
 
-        public void Commit(Enlistment enlistment)
-        {
-            enlistment.Done();
-        }
+        public void Commit(Enlistment enlistment) => enlistment.Done();
 
-        public void Rollback(Enlistment enlistment)
-        {
-            enlistment.Done();
-        }
+        public void Rollback(Enlistment enlistment) => enlistment.Done();
 
-        public void InDoubt(Enlistment enlistment)
-        {
-            enlistment.Done();
-        }
+        public void InDoubt(Enlistment enlistment) => enlistment.Done();
     }
 }

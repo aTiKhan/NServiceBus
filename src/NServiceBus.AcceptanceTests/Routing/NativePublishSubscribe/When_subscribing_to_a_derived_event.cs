@@ -45,7 +45,7 @@
             public Publisher()
             {
                 EndpointSetup<DefaultPublisher>(b =>
-                    b.ConfigureTransport().Routing().RouteToEndpoint(typeof(Done), typeof(Subscriber)));
+                    b.ConfigureRouting().RouteToEndpoint(typeof(Done), typeof(Subscriber)));
             }
         }
 
@@ -62,24 +62,34 @@
 
             public class MyEventHandler : IHandleMessages<SpecificEvent>
             {
-                public Context Context { get; set; }
+                public MyEventHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(SpecificEvent messageThatIsEnlisted, IMessageHandlerContext context)
                 {
-                    Context.SubscriberGotEvent = true;
+                    testContext.SubscriberGotEvent = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
 
             public class DoneHandler : IHandleMessages<Done>
             {
-                public Context Context { get; set; }
+                public DoneHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(Done message, IMessageHandlerContext context)
                 {
-                    Context.Done = true;
+                    testContext.Done = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

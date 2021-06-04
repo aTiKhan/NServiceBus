@@ -1,16 +1,16 @@
 ﻿namespace NServiceBus.Pipeline
 {
+    using System;
     using Extensibility;
-    using ObjectBuilder;
 
     /// <summary>
     /// Base interface for a pipeline behavior.
     /// </summary>
-    public interface IBehaviorContext : IExtendable
+    public interface IBehaviorContext : ICancellableContext, IExtendable
     {
         /// <summary>
-        /// The current <see cref="IBuilder" />.
+        /// The current <see cref="IServiceProvider" />.
         /// </summary>
-        IBuilder Builder { get; }
+        IServiceProvider Builder { get; }
     }
 }

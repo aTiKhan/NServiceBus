@@ -41,6 +41,7 @@ namespace NServiceBus.Sagas
         {
             Guard.AgainstNull(nameof(availableTypes), availableTypes);
             Guard.AgainstNull(nameof(conventions), conventions);
+
             var availableTypesList = availableTypes.ToList();
 
             var foundSagas = availableTypesList.Where(SagaMetadata.IsSagaType)
@@ -79,6 +80,35 @@ namespace NServiceBus.Sagas
         internal bool TryFind(Type sagaType, out SagaMetadata targetSagaMetaData)
         {
             return byType.TryGetValue(sagaType, out targetSagaMetaData);
+        }
+
+        internal void VerifyIfEntitiesAreShared()
+        {
+            var violations = new List<string>();
+
+            foreach (var saga in byType.Values)
+            {
+                foreach (var entityItem in byEntity)
+                {
+                    if (entityItem.Value.SagaType == saga.SagaType)
+                    {
+                        continue;
+                    }
+
+                    var entityItemTypeIsAssignableBySagaEntityType = entityItem.Key.IsAssignableFrom(saga.SagaEntityType);
+                    var sagaEntityTypeIsAssignableByEntityItemType = saga.SagaEntityType.IsAssignableFrom(entityItem.Key);
+
+                    if (entityItemTypeIsAssignableBySagaEntityType || sagaEntityTypeIsAssignableByEntityItemType)
+                    {
+                        violations.Add($"Entity '{saga.SagaEntityType}' used by saga types '{saga.SagaType}' and '{entityItem.Value.SagaType}'.");
+                    }
+                }
+            }
+
+            if (violations.Any())
+            {
+                throw new Exception("Best practice violation: Multiple saga types are sharing the same saga state which can result in persisters to physically share the same storage structure.\n\n- " + string.Join("\n- ", violations));
+            }
         }
 
         Dictionary<Type, SagaMetadata> byEntity = new Dictionary<Type, SagaMetadata>();

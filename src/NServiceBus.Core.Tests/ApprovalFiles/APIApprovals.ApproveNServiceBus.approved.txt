@@ -1,0 +1,2863 @@
+[assembly: System.CLSCompliant(false)]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.AcceptanceTesting, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.ContainerTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Core.Tests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Hosting.Tests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.PerformanceTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.PersistenceTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.InteropServices.ComVisible(false)]
+namespace NServiceBus
+{
+    public enum AddressMode
+    {
+        Local = 0,
+        Remote = 1,
+    }
+    public class AssemblyScannerConfiguration
+    {
+        public AssemblyScannerConfiguration() { }
+        public string AdditionalAssemblyScanningPath { get; set; }
+        public bool ScanAppDomainAssemblies { get; set; }
+        public bool ScanAssembliesInNestedDirectories { get; set; }
+        public bool ThrowExceptions { get; set; }
+        public void ExcludeAssemblies(params string[] assemblies) { }
+        public void ExcludeTypes(params System.Type[] types) { }
+    }
+    public static class AssemblyScannerConfigurationExtensions
+    {
+        public static NServiceBus.AssemblyScannerConfiguration AssemblyScanner(this NServiceBus.EndpointConfiguration configuration) { }
+    }
+    public static class AuditConfigReader
+    {
+        public static bool TryGetAuditMessageExpiration(this NServiceBus.Settings.ReadOnlySettings settings, out System.TimeSpan auditMessageExpiration) { }
+        public static bool TryGetAuditQueueAddress(this NServiceBus.Settings.ReadOnlySettings settings, out string address) { }
+    }
+    public static class AutoSubscribeSettingsExtensions
+    {
+        public static NServiceBus.AutomaticSubscriptions.Config.AutoSubscribeSettings AutoSubscribe(this NServiceBus.EndpointConfiguration config) { }
+    }
+    public static class BestPracticesOptionExtensions
+    {
+        public static void DoNotEnforceBestPractices(this NServiceBus.Extensibility.ExtendableOptions options) { }
+        public static void DoNotEnforceBestPractices(this NServiceBus.Pipeline.IOutgoingPublishContext context) { }
+        public static void DoNotEnforceBestPractices(this NServiceBus.Pipeline.IOutgoingReplyContext context) { }
+        public static void DoNotEnforceBestPractices(this NServiceBus.Pipeline.IOutgoingSendContext context) { }
+        public static void DoNotEnforceBestPractices(this NServiceBus.Pipeline.ISubscribeContext context) { }
+        public static void DoNotEnforceBestPractices(this NServiceBus.Pipeline.IUnsubscribeContext context) { }
+        public static bool IgnoredBestPractices(this NServiceBus.Extensibility.ExtendableOptions options) { }
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public static class ConfigurationTimeoutExtensions
+    {
+        [System.Obsolete("The timeout manager has been removed. See the upgrade guide for more details. The" +
+            " member currently throws a NotImplementedException. Will be removed in version 9" +
+            ".0.0.", true)]
+        public static void TimeToWaitBeforeTriggeringCriticalErrorOnTimeoutOutages(this NServiceBus.EndpointConfiguration config, System.TimeSpan timeToWait) { }
+    }
+    public static class ConfigureAudit
+    {
+        public static void AuditProcessedMessagesTo(this NServiceBus.EndpointConfiguration config, string auditQueue, System.TimeSpan? timeToBeReceived = default) { }
+    }
+    public static class ConfigureCriticalErrorAction
+    {
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void DefineCriticalErrorAction(this NServiceBus.EndpointConfiguration endpointConfiguration, System.Func<NServiceBus.ICriticalErrorContext, System.Threading.Tasks.Task> onCriticalError) { }
+        public static void DefineCriticalErrorAction(this NServiceBus.EndpointConfiguration endpointConfiguration, System.Func<NServiceBus.ICriticalErrorContext, System.Threading.CancellationToken, System.Threading.Tasks.Task> onCriticalError) { }
+    }
+    public static class ConfigureError
+    {
+        public static void SendFailedMessagesTo(this NServiceBus.EndpointConfiguration config, string errorQueue) { }
+    }
+    public static class ConfigureFileShareDataBus
+    {
+        public static NServiceBus.DataBus.DataBusExtensions<NServiceBus.FileShareDataBus> BasePath(this NServiceBus.DataBus.DataBusExtensions<NServiceBus.FileShareDataBus> config, string basePath) { }
+    }
+    [System.Obsolete("Will be removed in version 9.0.0.", true)]
+    public static class ConfigureForwarding
+    {
+        [System.Obsolete(@"Message forwarding is no longer supported natively by NServiceBus. For auditing messages, use endpointConfiguration.AuditProcessedMessagesTo(address). If true message forwarding capabilities are needed, use a custom pipeline behavior, an example of which can be found in the documentation. The member currently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void ForwardReceivedMessagesTo(this NServiceBus.EndpointConfiguration config, string address) { }
+    }
+    public static class ConfigureLicenseExtensions
+    {
+        public static void License(this NServiceBus.EndpointConfiguration config, string licenseText) { }
+        public static void LicensePath(this NServiceBus.EndpointConfiguration config, string licenseFile) { }
+    }
+    public static class ConfigurePurging
+    {
+        public static void PurgeOnStartup(this NServiceBus.EndpointConfiguration config, bool value) { }
+    }
+    [System.Obsolete("Transport infrastructure setup control is not based on the installer configuratio" +
+        "n. Will be removed in version 9.0.0.", true)]
+    public static class ConfigureQueueCreation
+    {
+        [System.Obsolete("Transport infrastructure setup control is not based on the installer configuratio" +
+            "n. The member currently throws a NotImplementedException. Will be removed in ver" +
+            "sion 9.0.0.", true)]
+        public static bool CreateQueues(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        [System.Obsolete("Transport infrastructure setup control is not based on the installer configuratio" +
+            "n. The member currently throws a NotImplementedException. Will be removed in ver" +
+            "sion 9.0.0.", true)]
+        public static void DoNotCreateQueues(this NServiceBus.EndpointConfiguration config) { }
+    }
+    public static class ConnectorContextExtensions
+    {
+        public static NServiceBus.Pipeline.IAuditContext CreateAuditContext(this NServiceBus.Pipeline.ForkConnector<NServiceBus.Pipeline.IIncomingPhysicalMessageContext, NServiceBus.Pipeline.IAuditContext> forkConnector, NServiceBus.Transport.OutgoingMessage message, string auditAddress, NServiceBus.Pipeline.IIncomingPhysicalMessageContext sourceContext) { }
+        public static NServiceBus.Pipeline.IBatchDispatchContext CreateBatchDispatchContext(this NServiceBus.Pipeline.StageForkConnector<NServiceBus.Pipeline.ITransportReceiveContext, NServiceBus.Pipeline.IIncomingPhysicalMessageContext, NServiceBus.Pipeline.IBatchDispatchContext> stageForkConnector, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Transport.TransportOperation> transportOperations, NServiceBus.Pipeline.IIncomingPhysicalMessageContext sourceContext) { }
+        public static NServiceBus.Pipeline.IDispatchContext CreateDispatchContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IBatchDispatchContext, NServiceBus.Pipeline.IDispatchContext> stageConnector, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Transport.TransportOperation> transportOperations, NServiceBus.Pipeline.IBatchDispatchContext sourceContext) { }
+        public static NServiceBus.Pipeline.IDispatchContext CreateDispatchContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IRoutingContext, NServiceBus.Pipeline.IDispatchContext> stageConnector, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Transport.TransportOperation> transportOperations, NServiceBus.Pipeline.IRoutingContext sourceContext) { }
+        [System.Obsolete("Message forwarding is no longer supported, but can be implemented as a custom pip" +
+            "eline behavior. The member currently throws a NotImplementedException. Will be r" +
+            "emoved in version 9.0.0.", true)]
+        public static NServiceBus.Pipeline.IForwardingContext CreateForwardingContext(this NServiceBus.Pipeline.ForkConnector<NServiceBus.Pipeline.IIncomingPhysicalMessageContext, NServiceBus.Pipeline.IForwardingContext> forwardingContext, NServiceBus.Transport.OutgoingMessage message, string forwardingAddress, NServiceBus.Pipeline.IIncomingPhysicalMessageContext sourceContext) { }
+        public static NServiceBus.Pipeline.IIncomingLogicalMessageContext CreateIncomingLogicalMessageContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IIncomingPhysicalMessageContext, NServiceBus.Pipeline.IIncomingLogicalMessageContext> stageConnector, NServiceBus.Pipeline.LogicalMessage logicalMessage, NServiceBus.Pipeline.IIncomingPhysicalMessageContext sourceContext) { }
+        public static NServiceBus.Pipeline.IIncomingPhysicalMessageContext CreateIncomingPhysicalMessageContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.ITransportReceiveContext, NServiceBus.Pipeline.IIncomingPhysicalMessageContext> stageConnector, NServiceBus.Transport.IncomingMessage incomingMessage, NServiceBus.Pipeline.ITransportReceiveContext sourceContext) { }
+        public static NServiceBus.Pipeline.IIncomingPhysicalMessageContext CreateIncomingPhysicalMessageContext(this NServiceBus.Pipeline.StageForkConnector<NServiceBus.Pipeline.ITransportReceiveContext, NServiceBus.Pipeline.IIncomingPhysicalMessageContext, NServiceBus.Pipeline.IBatchDispatchContext> stageForkConnector, NServiceBus.Transport.IncomingMessage incomingMessage, NServiceBus.Pipeline.ITransportReceiveContext sourceContext) { }
+        public static NServiceBus.Pipeline.IInvokeHandlerContext CreateInvokeHandlerContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IIncomingLogicalMessageContext, NServiceBus.Pipeline.IInvokeHandlerContext> stageConnector, NServiceBus.Pipeline.MessageHandler messageHandler, NServiceBus.Persistence.CompletableSynchronizedStorageSession storageSession, NServiceBus.Pipeline.IIncomingLogicalMessageContext sourceContext) { }
+        public static NServiceBus.Pipeline.IOutgoingLogicalMessageContext CreateOutgoingLogicalMessageContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IOutgoingPublishContext, NServiceBus.Pipeline.IOutgoingLogicalMessageContext> stageConnector, NServiceBus.Pipeline.OutgoingLogicalMessage outgoingMessage, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> routingStrategies, NServiceBus.Pipeline.IOutgoingPublishContext sourceContext) { }
+        public static NServiceBus.Pipeline.IOutgoingLogicalMessageContext CreateOutgoingLogicalMessageContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IOutgoingReplyContext, NServiceBus.Pipeline.IOutgoingLogicalMessageContext> stageConnector, NServiceBus.Pipeline.OutgoingLogicalMessage outgoingMessage, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> routingStrategies, NServiceBus.Pipeline.IOutgoingReplyContext sourceContext) { }
+        public static NServiceBus.Pipeline.IOutgoingLogicalMessageContext CreateOutgoingLogicalMessageContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IOutgoingSendContext, NServiceBus.Pipeline.IOutgoingLogicalMessageContext> stageConnector, NServiceBus.Pipeline.OutgoingLogicalMessage outgoingMessage, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> routingStrategies, NServiceBus.Pipeline.IOutgoingSendContext sourceContext) { }
+        public static NServiceBus.Pipeline.IOutgoingPhysicalMessageContext CreateOutgoingPhysicalMessageContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IOutgoingLogicalMessageContext, NServiceBus.Pipeline.IOutgoingPhysicalMessageContext> stageConnector, byte[] messageBody, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> routingStrategies, NServiceBus.Pipeline.IOutgoingLogicalMessageContext sourceContext) { }
+        public static NServiceBus.Pipeline.IRoutingContext CreateRoutingContext(this NServiceBus.Pipeline.ForkConnector<NServiceBus.Pipeline.ITransportReceiveContext, NServiceBus.Pipeline.IRoutingContext> forkConnector, NServiceBus.Transport.OutgoingMessage outgoingMessage, string localAddress, NServiceBus.Pipeline.ITransportReceiveContext sourceContext) { }
+        public static NServiceBus.Pipeline.IRoutingContext CreateRoutingContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IAuditContext, NServiceBus.Pipeline.IRoutingContext> stageConnector, NServiceBus.Transport.OutgoingMessage outgoingMessage, NServiceBus.Routing.RoutingStrategy routingStrategy, NServiceBus.Pipeline.IAuditContext sourceContext) { }
+        public static NServiceBus.Pipeline.IRoutingContext CreateRoutingContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IForwardingContext, NServiceBus.Pipeline.IRoutingContext> stageConnector, NServiceBus.Transport.OutgoingMessage outgoingMessage, NServiceBus.Routing.RoutingStrategy routingStrategy, NServiceBus.Pipeline.IForwardingContext sourceContext) { }
+        public static NServiceBus.Pipeline.IRoutingContext CreateRoutingContext(this NServiceBus.Pipeline.StageConnector<NServiceBus.Pipeline.IOutgoingPhysicalMessageContext, NServiceBus.Pipeline.IRoutingContext> stageConnector, NServiceBus.Transport.OutgoingMessage outgoingMessage, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> routingStrategies, NServiceBus.Pipeline.IOutgoingPhysicalMessageContext sourceContext) { }
+    }
+    public abstract class ContainSagaData : NServiceBus.IContainSagaData
+    {
+        protected ContainSagaData() { }
+        public virtual System.Guid Id { get; set; }
+        public virtual string OriginalMessageId { get; set; }
+        public virtual string Originator { get; set; }
+    }
+    public static class ContentTypes
+    {
+        public const string Json = "application/json";
+        public const string Xml = "text/xml";
+    }
+    public class Conventions
+    {
+        public Conventions() { }
+        public void AddSystemMessagesConventions(System.Func<System.Type, bool> definesMessageType) { }
+        public bool IsCommandType(System.Type t) { }
+        public bool IsDataBusProperty(System.Reflection.PropertyInfo property) { }
+        public bool IsEventType(System.Type t) { }
+        public bool IsInSystemConventionList(System.Type t) { }
+        public bool IsMessageType(System.Type t) { }
+    }
+    public class ConventionsBuilder : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public ConventionsBuilder(NServiceBus.Settings.SettingsHolder settings) { }
+        public NServiceBus.Conventions Conventions { get; }
+        public NServiceBus.ConventionsBuilder Add(NServiceBus.IMessageConvention messageConvention) { }
+        public NServiceBus.ConventionsBuilder DefiningCommandsAs(System.Func<System.Type, bool> definesCommandType) { }
+        public NServiceBus.ConventionsBuilder DefiningDataBusPropertiesAs(System.Func<System.Reflection.PropertyInfo, bool> definesDataBusProperty) { }
+        public NServiceBus.ConventionsBuilder DefiningEventsAs(System.Func<System.Type, bool> definesEventType) { }
+        public NServiceBus.ConventionsBuilder DefiningMessagesAs(System.Func<System.Type, bool> definesMessageType) { }
+    }
+    public class ConversationId
+    {
+        public static NServiceBus.ConversationId Default { get; }
+        public static NServiceBus.ConversationId Custom(string customValue) { }
+    }
+    public class ConversationIdStrategyContext
+    {
+        public ConversationIdStrategyContext(NServiceBus.Pipeline.OutgoingLogicalMessage message, System.Collections.Generic.IReadOnlyDictionary<string, string> headers) { }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> Headers { get; }
+        public NServiceBus.Pipeline.OutgoingLogicalMessage Message { get; }
+    }
+    public static class ConversationRoutingExtensions
+    {
+        public static void StartNewConversation(this NServiceBus.SendOptions sendOptions, string conversationId = null) { }
+    }
+    public class CorrelatedSagaPropertyMapper<TSagaData>
+        where TSagaData :  class, NServiceBus.IContainSagaData
+    {
+        public NServiceBus.CorrelatedSagaPropertyMapper<TSagaData> ToMessage<TMessage>(System.Linq.Expressions.Expression<System.Func<TMessage, object>> messageProperty) { }
+        public NServiceBus.CorrelatedSagaPropertyMapper<TSagaData> ToMessageHeader<TMessage>(string headerName) { }
+    }
+    public class CriticalError
+    {
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public CriticalError(System.Func<NServiceBus.ICriticalErrorContext, System.Threading.Tasks.Task> onCriticalErrorAction) { }
+        public CriticalError(System.Func<NServiceBus.ICriticalErrorContext, System.Threading.CancellationToken, System.Threading.Tasks.Task> onCriticalErrorAction) { }
+        public virtual void Raise(string errorMessage, System.Exception exception, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public class CriticalErrorContext : NServiceBus.ICriticalErrorContext
+    {
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public CriticalErrorContext(System.Func<System.Threading.Tasks.Task> stop, string error, System.Exception exception) { }
+        public CriticalErrorContext(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> stop, string error, System.Exception exception) { }
+        public string Error { get; }
+        public System.Exception Exception { get; }
+        public System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> Stop { get; }
+    }
+    [System.Serializable]
+    public class DataBusProperty<T> : NServiceBus.IDataBusProperty, System.Runtime.Serialization.ISerializable
+        where T :  class
+    {
+        public DataBusProperty() { }
+        public DataBusProperty(T value) { }
+        protected DataBusProperty(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public bool HasValue { get; set; }
+        public string Key { get; set; }
+        public T Value { get; }
+        public void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public object GetValue() { }
+        public void SetValue(object valueToSet) { }
+    }
+    [System.Obsolete("Public APIs no longer use DateTime but DateTimeOffset. See the upgrade guide for " +
+        "more details. Use `NServiceBus.DateTimeOffsetExtensions` instead. Will be remove" +
+        "d in version 9.0.0.", true)]
+    public static class DateTimeExtensions
+    {
+        [System.Obsolete("Public APIs no longer use DateTime but DateTimeOffset. See the upgrade guide for " +
+            "more details. Use `NServiceBus.DateTimeOffsetHelper.ToDateTimeOffset` instead. T" +
+            "he member currently throws a NotImplementedException. Will be removed in version" +
+            " 9.0.0.", true)]
+        public static System.DateTime ToUtcDateTime(string wireFormattedString) { }
+        [System.Obsolete("Public APIs no longer use DateTime but DateTimeOffset. See the upgrade guide for " +
+            "more details. Use `NServiceBus.DateTimeOffsetHelper.ToWireFormattedString` inste" +
+            "ad. The member currently throws a NotImplementedException. Will be removed in ve" +
+            "rsion 9.0.0.", true)]
+        public static string ToWireFormattedString(System.DateTime dateTime) { }
+    }
+    public static class DateTimeOffsetHelper
+    {
+        public static System.DateTimeOffset ToDateTimeOffset(string wireFormattedString) { }
+        public static string ToWireFormattedString(System.DateTimeOffset dateTime) { }
+    }
+    public static class DefaultRecoverabilityPolicy
+    {
+        public static NServiceBus.RecoverabilityAction Invoke(NServiceBus.RecoverabilityConfig config, NServiceBus.Transport.ErrorContext errorContext) { }
+    }
+    public class DelayedConfig
+    {
+        public DelayedConfig(int maxNumberOfRetries, System.TimeSpan timeIncrease) { }
+        public int MaxNumberOfRetries { get; }
+        public System.TimeSpan TimeIncrease { get; }
+    }
+    public static class DelayedDeliveryOptionExtensions
+    {
+        public static void DelayDeliveryWith(this NServiceBus.SendOptions options, System.TimeSpan delay) { }
+        public static void DoNotDeliverBefore(this NServiceBus.SendOptions options, System.DateTimeOffset at) { }
+        public static System.DateTimeOffset? GetDeliveryDate(this NServiceBus.SendOptions options) { }
+        public static System.TimeSpan? GetDeliveryDelay(this NServiceBus.SendOptions options) { }
+    }
+    public class DelayedRetriesSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public NServiceBus.DelayedRetriesSettings NumberOfRetries(int numberOfRetries) { }
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.DelayedRetriesSettings OnMessageBeingRetried(System.Func<NServiceBus.Faults.DelayedRetryMessage, System.Threading.Tasks.Task> notificationCallback) { }
+        public NServiceBus.DelayedRetriesSettings OnMessageBeingRetried(System.Func<NServiceBus.Faults.DelayedRetryMessage, System.Threading.CancellationToken, System.Threading.Tasks.Task> notificationCallback) { }
+        public NServiceBus.DelayedRetriesSettings TimeIncrease(System.TimeSpan timeIncrease) { }
+    }
+    public sealed class DelayedRetry : NServiceBus.RecoverabilityAction
+    {
+        public System.TimeSpan Delay { get; }
+    }
+    public enum DependencyLifecycle
+    {
+        SingleInstance = 0,
+        InstancePerUnitOfWork = 1,
+        InstancePerCall = 2,
+    }
+    public static class DiagnosticSettingsExtensions
+    {
+        public static void AddStartupDiagnosticsSection(this NServiceBus.Settings.ReadOnlySettings settings, string sectionName, object section) { }
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void CustomDiagnosticsWriter(this NServiceBus.EndpointConfiguration config, System.Func<string, System.Threading.Tasks.Task> customDiagnosticsWriter) { }
+        public static void CustomDiagnosticsWriter(this NServiceBus.EndpointConfiguration config, System.Func<string, System.Threading.CancellationToken, System.Threading.Tasks.Task> customDiagnosticsWriter) { }
+        public static void SetDiagnosticsPath(this NServiceBus.EndpointConfiguration config, string path) { }
+    }
+    public sealed class Discard : NServiceBus.RecoverabilityAction
+    {
+        public string Reason { get; }
+    }
+    public class DistributionPolicy : NServiceBus.IDistributionPolicy
+    {
+        public DistributionPolicy() { }
+        public void SetDistributionStrategy(NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
+    }
+    public enum DistributionStrategyScope
+    {
+        Send = 0,
+        Publish = 1,
+    }
+    [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+        ". See the upgrade guide for more details. Will be removed in version 9.0.0.", true)]
+    public static class DurableMessagesConfig
+    {
+        [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+            ". See the upgrade guide for more details. The member currently throws a NotImple" +
+            "mentedException. Will be removed in version 9.0.0.", true)]
+        public static void DisableDurableMessages(this NServiceBus.EndpointConfiguration config) { }
+        [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+            ". See the upgrade guide for more details. The member currently throws a NotImple" +
+            "mentedException. Will be removed in version 9.0.0.", true)]
+        public static bool DurableMessagesEnabled(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+            ". See the upgrade guide for more details. The member currently throws a NotImple" +
+            "mentedException. Will be removed in version 9.0.0.", true)]
+        public static void EnableDurableMessages(this NServiceBus.EndpointConfiguration config) { }
+    }
+    [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+        ". See the upgrade guide for more details. Will be removed in version 9.0.0.", true)]
+    public static class DurableMessagesConventionExtensions
+    {
+        [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+            ". See the upgrade guide for more details. The member currently throws a NotImple" +
+            "mentedException. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.ConventionsBuilder DefiningExpressMessagesAs(this NServiceBus.ConventionsBuilder builder, System.Func<System.Type, bool> definesExpressMessageType) { }
+    }
+    public static class Endpoint
+    {
+        public static System.Threading.Tasks.Task<NServiceBus.IStartableEndpoint> Create(NServiceBus.EndpointConfiguration configuration, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<NServiceBus.IEndpointInstance> Start(NServiceBus.EndpointConfiguration configuration, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public class EndpointConfiguration : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public EndpointConfiguration(string endpointName) { }
+        public NServiceBus.Notifications Notifications { get; }
+        public NServiceBus.Pipeline.PipelineSettings Pipeline { get; }
+        public NServiceBus.ConventionsBuilder Conventions() { }
+        public void RegisterComponents(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection> registration) { }
+        public void SendOnly() { }
+        [System.Obsolete("Use the externally managed container mode to integrate with third party dependenc" +
+            "y injection containers. The member currently throws a NotImplementedException. W" +
+            "ill be removed in version 9.0.0.", true)]
+        public void UseContainer(NServiceBus.ObjectBuilder.Common.IContainer builder) { }
+        [System.Obsolete("Use the externally managed container mode to integrate with third party dependenc" +
+            "y injection containers. The member currently throws a NotImplementedException. W" +
+            "ill be removed in version 9.0.0.", true)]
+        public void UseContainer(System.Type definitionType) { }
+        [System.Obsolete("Use the externally managed container mode to integrate with third party dependenc" +
+            "y injection containers. The member currently throws a NotImplementedException. W" +
+            "ill be removed in version 9.0.0.", true)]
+        public void UseContainer<T>(System.Action<NServiceBus.Container.ContainerCustomizations> customizations = null)
+            where T : NServiceBus.Container.ContainerDefinition, new () { }
+        public NServiceBus.RoutingSettings<TTransport> UseTransport<TTransport>(TTransport transportDefinition)
+            where TTransport : NServiceBus.Transport.TransportDefinition { }
+    }
+    public static class EndpointConfigurationExtensions
+    {
+        public static void DisableFeature(this NServiceBus.EndpointConfiguration config, System.Type featureType) { }
+        public static void DisableFeature<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.Features.Feature { }
+        public static void EnableFeature(this NServiceBus.EndpointConfiguration config, System.Type featureType) { }
+        public static void EnableFeature<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.Features.Feature { }
+    }
+    public static class EndpointInstanceExtensions
+    {
+        public static System.Threading.Tasks.Task Stop(this NServiceBus.IEndpointInstance endpoint, System.TimeSpan gracefulStopTimeout) { }
+    }
+    public static class EndpointWithExternallyManagedContainer
+    {
+        public static NServiceBus.IStartableEndpointWithExternallyManagedContainer Create(NServiceBus.EndpointConfiguration configuration, Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection) { }
+    }
+    public static class ErrorQueueSettings
+    {
+        public const string SettingsKey = "errorQueue";
+        public static string ErrorQueueAddress(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        public static bool TryGetExplicitlyConfiguredErrorQueueAddress(this NServiceBus.Settings.ReadOnlySettings settings, out string errorQueue) { }
+    }
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Interface | System.AttributeTargets.All)]
+    [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+        ". See the upgrade guide for more details. Will be removed in version 9.0.0.", true)]
+    public sealed class ExpressAttribute : System.Attribute
+    {
+        public ExpressAttribute() { }
+    }
+    public class FailedConfig
+    {
+        public FailedConfig(string errorQueue, System.Collections.Generic.HashSet<System.Type> unrecoverableExceptionTypes) { }
+        public string ErrorQueue { get; }
+        public System.Collections.Generic.HashSet<System.Type> UnrecoverableExceptionTypes { get; }
+    }
+    public class FileShareDataBus : NServiceBus.DataBus.DataBusDefinition
+    {
+        public FileShareDataBus() { }
+        protected override System.Type ProvidedByFeature() { }
+    }
+    public static class HeaderOptionExtensions
+    {
+        public static System.Collections.Generic.IReadOnlyDictionary<string, string> GetHeaders(this NServiceBus.Extensibility.ExtendableOptions options) { }
+        public static void SetHeader(this NServiceBus.Extensibility.ExtendableOptions options, string key, string value) { }
+    }
+    public static class Headers
+    {
+        public const string ContentType = "NServiceBus.ContentType";
+        public const string ControlMessageHeader = "NServiceBus.ControlMessage";
+        public const string ConversationId = "NServiceBus.ConversationId";
+        public const string CorrelationId = "NServiceBus.CorrelationId";
+        public const string DelayedRetries = "NServiceBus.Retries";
+        public const string DelayedRetriesTimestamp = "NServiceBus.Retries.Timestamp";
+        public const string DestinationSites = "NServiceBus.DestinationSites";
+        public const string EnclosedMessageTypes = "NServiceBus.EnclosedMessageTypes";
+        public const string HasLicenseExpired = "$.diagnostics.license.expired";
+        [System.Obsolete("Not intended for public usage. Will be removed in version 9.0.0.", true)]
+        public const string HeaderName = "Header";
+        public const string HostDisplayName = "$.diagnostics.hostdisplayname";
+        public const string HostId = "$.diagnostics.hostid";
+        public const string HttpFrom = "NServiceBus.From";
+        public const string HttpTo = "NServiceBus.To";
+        public const string ImmediateRetries = "NServiceBus.FLRetries";
+        public const string IsDeferredMessage = "NServiceBus.IsDeferredMessage";
+        public const string IsSagaTimeoutMessage = "NServiceBus.IsSagaTimeoutMessage";
+        public const string MessageId = "NServiceBus.MessageId";
+        public const string MessageIntent = "NServiceBus.MessageIntent";
+        public const string NServiceBusVersion = "NServiceBus.Version";
+        [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+            ". See the upgrade guide for more details. Will be removed in version 9.0.0.", true)]
+        public const string NonDurableMessage = "NServiceBus.NonDurableMessage";
+        public const string OriginatingAddress = "NServiceBus.OriginatingAddress";
+        public const string OriginatingEndpoint = "NServiceBus.OriginatingEndpoint";
+        public const string OriginatingHostId = "$.diagnostics.originating.hostid";
+        public const string OriginatingMachine = "NServiceBus.OriginatingMachine";
+        public const string OriginatingSagaId = "NServiceBus.OriginatingSagaId";
+        public const string OriginatingSagaType = "NServiceBus.OriginatingSagaType";
+        public const string OriginatingSite = "NServiceBus.OriginatingSite";
+        public const string PreviousConversationId = "NServiceBus.PreviousConversationId";
+        public const string ProcessingEnded = "NServiceBus.ProcessingEnded";
+        public const string ProcessingEndpoint = "NServiceBus.ProcessingEndpoint";
+        public const string ProcessingMachine = "NServiceBus.ProcessingMachine";
+        public const string ProcessingStarted = "NServiceBus.ProcessingStarted";
+        public const string RelatedTo = "NServiceBus.RelatedTo";
+        public const string ReplyToAddress = "NServiceBus.ReplyToAddress";
+        public const string ReturnMessageErrorCodeHeader = "NServiceBus.ReturnMessage.ErrorCode";
+        public const string RouteTo = "NServiceBus.Header.RouteTo";
+        public const string SagaId = "NServiceBus.SagaId";
+        public const string SagaType = "NServiceBus.SagaType";
+        public const string SubscriberEndpoint = "NServiceBus.SubscriberEndpoint";
+        public const string SubscriberTransportAddress = "NServiceBus.SubscriberAddress";
+        public const string SubscriptionMessageType = "SubscriptionMessageType";
+        public const string TimeSent = "NServiceBus.TimeSent";
+        public const string TimeToBeReceived = "NServiceBus.TimeToBeReceived";
+    }
+    public static class HostInfoConfigurationExtensions
+    {
+        public static NServiceBus.HostInfoSettings UniquelyIdentifyRunningInstance(this NServiceBus.EndpointConfiguration config) { }
+    }
+    public class HostInfoSettings
+    {
+        public NServiceBus.HostInfoSettings UsingCustomDisplayName(string displayName) { }
+        public NServiceBus.HostInfoSettings UsingCustomIdentifier(System.Guid id) { }
+        public NServiceBus.HostInfoSettings UsingInstalledFilePath() { }
+        public NServiceBus.HostInfoSettings UsingNames(string instanceName, string hostName) { }
+    }
+    public interface IAmStartedByMessages<T> : NServiceBus.IHandleMessages<T> { }
+    public interface ICancellableContext
+    {
+        System.Threading.CancellationToken CancellationToken { get; }
+    }
+    public interface ICommand : NServiceBus.IMessage { }
+    public interface IConfigureHowToFindSagaWithMessage
+    {
+        void ConfigureMapping<TSagaEntity, TMessage>(System.Linq.Expressions.Expression<System.Func<TSagaEntity, object>> sagaEntityProperty, System.Linq.Expressions.Expression<System.Func<TMessage, object>> messageProperty)
+            where TSagaEntity : NServiceBus.IContainSagaData
+        ;
+    }
+    public interface IConfigureHowToFindSagaWithMessageHeaders
+    {
+        void ConfigureMapping<TSagaEntity, TMessage>(System.Linq.Expressions.Expression<System.Func<TSagaEntity, object>> sagaEntityProperty, string headerName)
+            where TSagaEntity : NServiceBus.IContainSagaData
+        ;
+    }
+    public interface IContainSagaData
+    {
+        System.Guid Id { get; set; }
+        string OriginalMessageId { get; set; }
+        string Originator { get; set; }
+    }
+    public interface ICriticalErrorContext
+    {
+        string Error { get; }
+        System.Exception Exception { get; }
+        System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> Stop { get; }
+    }
+    public interface IDataBusProperty
+    {
+        bool HasValue { get; set; }
+        string Key { get; set; }
+        object GetValue();
+        void SetValue(object value);
+    }
+    public interface IDistributionPolicy
+    {
+        NServiceBus.Routing.DistributionStrategy GetDistributionStrategy(string endpointName, NServiceBus.DistributionStrategyScope scope);
+    }
+    public interface IEndpointInstance : NServiceBus.IMessageSession
+    {
+        System.Threading.Tasks.Task Stop(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IEvent : NServiceBus.IMessage { }
+    public interface IHandleMessages<T>
+    {
+        System.Threading.Tasks.Task Handle(T message, NServiceBus.IMessageHandlerContext context);
+    }
+    public interface IHandleTimeouts<T>
+    {
+        System.Threading.Tasks.Task Timeout(T state, NServiceBus.IMessageHandlerContext context);
+    }
+    public interface IMessage { }
+    public interface IMessageConvention
+    {
+        string Name { get; }
+        bool IsCommandType(System.Type type);
+        bool IsEventType(System.Type type);
+        bool IsMessageType(System.Type type);
+    }
+    public interface IMessageCreator
+    {
+        object CreateInstance(System.Type messageType);
+        T CreateInstance<T>();
+        T CreateInstance<T>(System.Action<T> action);
+    }
+    public interface IMessageHandlerContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IMessageProcessingContext, NServiceBus.IPipelineContext
+    {
+        NServiceBus.Persistence.SynchronizedStorageSession SynchronizedStorageSession { get; }
+        void DoNotContinueDispatchingCurrentMessageToHandlers();
+    }
+    public interface IMessageProcessingContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext
+    {
+        System.Collections.Generic.IReadOnlyDictionary<string, string> MessageHeaders { get; }
+        string MessageId { get; }
+        string ReplyToAddress { get; }
+        System.Threading.Tasks.Task ForwardCurrentMessageTo(string destination);
+        System.Threading.Tasks.Task Reply(object message, NServiceBus.ReplyOptions options);
+        System.Threading.Tasks.Task Reply<T>(System.Action<T> messageConstructor, NServiceBus.ReplyOptions options);
+    }
+    public interface IMessageSession
+    {
+        System.Threading.Tasks.Task Publish(object message, NServiceBus.PublishOptions publishOptions, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, NServiceBus.PublishOptions publishOptions, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Send(object message, NServiceBus.SendOptions sendOptions, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, NServiceBus.SendOptions sendOptions, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.SubscribeOptions subscribeOptions, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.UnsubscribeOptions unsubscribeOptions, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface INeedInitialization
+    {
+        void Customize(NServiceBus.EndpointConfiguration configuration);
+    }
+    public interface IPipelineContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext
+    {
+        System.Threading.Tasks.Task Publish(object message, NServiceBus.PublishOptions options);
+        System.Threading.Tasks.Task Publish<T>(System.Action<T> messageConstructor, NServiceBus.PublishOptions publishOptions);
+        System.Threading.Tasks.Task Send(object message, NServiceBus.SendOptions options);
+        System.Threading.Tasks.Task Send<T>(System.Action<T> messageConstructor, NServiceBus.SendOptions options);
+    }
+    public interface IStartableEndpoint
+    {
+        System.Threading.Tasks.Task<NServiceBus.IEndpointInstance> Start(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IStartableEndpointWithExternallyManagedContainer
+    {
+        System.Lazy<NServiceBus.IMessageSession> MessageSession { get; }
+        System.Threading.Tasks.Task<NServiceBus.IEndpointInstance> Start(System.IServiceProvider builder, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IToSagaExpression<TSagaData>
+        where TSagaData : NServiceBus.IContainSagaData
+    {
+        void ToSaga(System.Linq.Expressions.Expression<System.Func<TSagaData, object>> sagaEntityProperty);
+    }
+    public interface IWantToRunBeforeConfigurationIsFinalized
+    {
+        void Run(NServiceBus.Settings.SettingsHolder settings);
+    }
+    public class ImmediateConfig
+    {
+        public ImmediateConfig(int maxNumberOfRetries) { }
+        public int MaxNumberOfRetries { get; }
+    }
+    public static class ImmediateDispatchOptionExtensions
+    {
+        public static void RequireImmediateDispatch(this NServiceBus.Extensibility.ExtendableOptions options) { }
+        public static bool RequiredImmediateDispatch(this NServiceBus.Extensibility.ExtendableOptions options) { }
+    }
+    public class ImmediateRetriesSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public void NumberOfRetries(int numberOfRetries) { }
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.ImmediateRetriesSettings OnMessageBeingRetried(System.Func<NServiceBus.Faults.ImmediateRetryMessage, System.Threading.Tasks.Task> notificationCallback) { }
+        public NServiceBus.ImmediateRetriesSettings OnMessageBeingRetried(System.Func<NServiceBus.Faults.ImmediateRetryMessage, System.Threading.CancellationToken, System.Threading.Tasks.Task> notificationCallback) { }
+    }
+    public sealed class ImmediateRetry : NServiceBus.RecoverabilityAction { }
+    [System.Obsolete("Gateway persistence has been moved to the NServiceBus.Gateway dedicated package. " +
+        "Will be removed in version 9.0.0.", true)]
+    public static class InMemoryGatewayPersistenceConfigurationExtensions
+    {
+        [System.Obsolete("Gateway persistence has been moved to the NServiceBus.Gateway dedicated package. " +
+            "The member currently throws a NotImplementedException. Will be removed in versio" +
+            "n 9.0.0.", true)]
+        public static void GatewayDeduplicationCacheSize(this NServiceBus.PersistenceExtensions<NServiceBus.InMemoryPersistence> persistenceExtensions, int maxSize) { }
+    }
+    [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+        "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+        " be removed in version 9.0.0.", true)]
+    public class InMemoryOutboxPersistence
+    {
+        public InMemoryOutboxPersistence() { }
+    }
+    [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+        "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+        " be removed in version 9.0.0.", true)]
+    public static class InMemoryOutboxSettingsExtensions
+    {
+        [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+            "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+            " be removed in version 9.0.0.", true)]
+        public static NServiceBus.Outbox.OutboxSettings TimeToKeepDeduplicationData(this NServiceBus.Outbox.OutboxSettings settings, System.TimeSpan time) { }
+    }
+    [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+        "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+        " be removed in version 9.0.0.", true)]
+    public class InMemoryPersistence : NServiceBus.Persistence.PersistenceDefinition
+    {
+        public InMemoryPersistence() { }
+    }
+    [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+        "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+        " be removed in version 9.0.0.", true)]
+    public class InMemorySagaPersistence
+    {
+        public InMemorySagaPersistence() { }
+    }
+    [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+        "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+        " be removed in version 9.0.0.", true)]
+    public class InMemorySubscriptionPersistence
+    {
+        public InMemorySubscriptionPersistence() { }
+    }
+    [System.Obsolete("The InMemoryPersistence has been moved to a dedicated Nuget Package called NServi" +
+        "ceBus.Persistence.NonDurable and has been renamed to NonDurablePersistence. Will" +
+        " be removed in version 9.0.0.", true)]
+    public class InMemoryTimeoutPersistence
+    {
+        public InMemoryTimeoutPersistence() { }
+    }
+    public static class InstallConfigExtensions
+    {
+        public static void EnableInstallers(this NServiceBus.EndpointConfiguration config, string username = null) { }
+    }
+    public class LearningPersistence : NServiceBus.Persistence.PersistenceDefinition { }
+    public static class LearningSagaPersisterConfigurationExtensions
+    {
+        public static void SagaStorageDirectory(this NServiceBus.PersistenceExtensions<NServiceBus.LearningPersistence> persistenceExtensions, string path) { }
+    }
+    public class LearningTransport : NServiceBus.Transport.TransportDefinition
+    {
+        public LearningTransport() { }
+        public bool RestrictPayloadSize { get; set; }
+        public string StorageDirectory { get; set; }
+        public override System.Collections.Generic.IReadOnlyCollection<NServiceBus.TransportTransactionMode> GetSupportedTransactionModes() { }
+        public override System.Threading.Tasks.Task<NServiceBus.Transport.TransportInfrastructure> Initialize(NServiceBus.Transport.HostSettings hostSettings, NServiceBus.Transport.ReceiveSettings[] receivers, string[] sendingAddresses, System.Threading.CancellationToken cancellationToken = default) { }
+        public override string ToTransportAddress(NServiceBus.Transport.QueueAddress queueAddress) { }
+    }
+    public static class LearningTransportApiExtensions
+    {
+        [System.Obsolete("Use `EndpointConfiguration.UseTransport(TransportDefinition)` instead. Will be tr" +
+            "eated as an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static NServiceBus.LearningTransportSettings UseTransport<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.LearningTransport { }
+    }
+    public class LearningTransportSettings : NServiceBus.TransportSettings<NServiceBus.LearningTransport>
+    {
+        [System.Obsolete("Use `Use LearningTransport.RestrictPayloadSize` instead. Will be treated as an er" +
+            "ror from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public NServiceBus.LearningTransportSettings NoPayloadSizeRestriction() { }
+        [System.Obsolete("Use `Use LearningTransport.StorageDirectory` instead. Will be treated as an error" +
+            " from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public NServiceBus.LearningTransportSettings StorageDirectory(string storageDir) { }
+    }
+    public static class LoadMessageHandlersExtensions
+    {
+        public static void ExecuteTheseHandlersFirst(this NServiceBus.EndpointConfiguration config, System.Collections.Generic.IEnumerable<System.Type> handlerTypes) { }
+        public static void ExecuteTheseHandlersFirst(this NServiceBus.EndpointConfiguration config, params System.Type[] handlerTypes) { }
+    }
+    [System.Obsolete("Use `QueueAddress` instead. Will be removed in version 9.0.0.", true)]
+    public struct LogicalAddress
+    {
+        [System.Obsolete("Use `QueueAddress` instead. The member currently throws a NotImplementedException" +
+            ". Will be removed in version 9.0.0.", true)]
+        public NServiceBus.Routing.EndpointInstance EndpointInstance { get; }
+        [System.Obsolete("Use `QueueAddress.Qualifier` instead. The member currently throws a NotImplemente" +
+            "dException. Will be removed in version 9.0.0.", true)]
+        public string Qualifier { get; }
+        [System.Obsolete("Directly construct a QueueAddress with the discriminator. The member currently th" +
+            "rows a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.LogicalAddress CreateIndividualizedAddress(string discriminator) { }
+        [System.Obsolete("Directly construct a QueueAddress with the qualifier. The member currently throws" +
+            " a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.LogicalAddress CreateQualifiedAddress(string qualifier) { }
+        [System.Obsolete("Directly construct a QueueAddress with the queueName as the BaseAddress. The memb" +
+            "er currently throws a NotImplementedException. Will be removed in version 9.0.0." +
+            "", true)]
+        public static NServiceBus.LogicalAddress CreateLocalAddress(string queueName, System.Collections.Generic.IReadOnlyDictionary<string, string> properties) { }
+        [System.Obsolete("Directly construct a QueueAddress. The member currently throws a NotImplementedEx" +
+            "ception. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.LogicalAddress CreateRemoteAddress(NServiceBus.Routing.EndpointInstance endpointInstance) { }
+    }
+    public static class MessageCausationConfigurationExtensions
+    {
+        public static void CustomConversationIdStrategy(this NServiceBus.EndpointConfiguration endpointConfiguration, System.Func<NServiceBus.ConversationIdStrategyContext, NServiceBus.ConversationId> customStrategy) { }
+    }
+    [System.Serializable]
+    public class MessageDeserializationException : System.Runtime.Serialization.SerializationException
+    {
+        public MessageDeserializationException(string message) { }
+        protected MessageDeserializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public MessageDeserializationException(string messageId, System.Exception innerException) { }
+    }
+    public static class MessageDrivenSubscriptionsConfigExtensions
+    {
+        public static void DisablePublishing<T>(this NServiceBus.RoutingSettings<T> routingSettings)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+        [System.Obsolete("Use `RoutingExtensions<T>.DisablePublishing` instead. The member currently throws" +
+            " a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void DisablePublishing<T>(this NServiceBus.TransportExtensions<T> transportExtensions)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+        public static void RegisterPublisher<T>(this NServiceBus.RoutingSettings<T> routingSettings, System.Reflection.Assembly assembly, string publisherEndpoint)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+        public static void RegisterPublisher<T>(this NServiceBus.RoutingSettings<T> routingSettings, System.Type eventType, string publisherEndpoint)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+        public static void RegisterPublisher<T>(this NServiceBus.RoutingSettings<T> routingSettings, System.Reflection.Assembly assembly, string @namespace, string publisherEndpoint)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+        public static void SubscriptionAuthorizer<T>(this NServiceBus.RoutingSettings<T> routingSettings, System.Func<NServiceBus.Pipeline.IIncomingPhysicalMessageContext, bool> authorizer)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+        [System.Obsolete("Use `RoutingExtensions<T>.SubscriptionAuthorizer` instead. The member currently t" +
+            "hrows a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void SubscriptionAuthorizer<T>(this NServiceBus.TransportExtensions<T> transportExtensions, System.Func<NServiceBus.Pipeline.IIncomingPhysicalMessageContext, bool> authorizer)
+            where T : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport { }
+    }
+    public static class MessageIdExtensions
+    {
+        public static string GetMessageId(this NServiceBus.Extensibility.ExtendableOptions options) { }
+        public static void SetMessageId(this NServiceBus.Extensibility.ExtendableOptions options, string messageId) { }
+    }
+    public enum MessageIntentEnum
+    {
+        Send = 1,
+        Publish = 2,
+        Subscribe = 3,
+        Unsubscribe = 4,
+        Reply = 5,
+    }
+    public static class MessageProcessingContextExtensions
+    {
+        public static System.Threading.Tasks.Task Reply(this NServiceBus.IMessageProcessingContext context, object message) { }
+        public static System.Threading.Tasks.Task Reply<T>(this NServiceBus.IMessageProcessingContext context, System.Action<T> messageConstructor) { }
+    }
+    public static class MessageProcessingOptimizationExtensions
+    {
+        public static void LimitMessageProcessingConcurrencyTo(this NServiceBus.EndpointConfiguration config, int maxConcurrency) { }
+    }
+    public static class MessageSessionExtensions
+    {
+        public static System.Threading.Tasks.Task Publish(this NServiceBus.IMessageSession session, object message, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Publish<T>(this NServiceBus.IMessageSession session, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Publish<T>(this NServiceBus.IMessageSession session, System.Action<T> messageConstructor, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Send(this NServiceBus.IMessageSession session, object message, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Send(this NServiceBus.IMessageSession session, string destination, object message, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Send<T>(this NServiceBus.IMessageSession session, System.Action<T> messageConstructor, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Send<T>(this NServiceBus.IMessageSession session, string destination, System.Action<T> messageConstructor, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task SendLocal(this NServiceBus.IMessageSession session, object message, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task SendLocal<T>(this NServiceBus.IMessageSession session, System.Action<T> messageConstructor, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Subscribe(this NServiceBus.IMessageSession session, System.Type messageType, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Subscribe<T>(this NServiceBus.IMessageSession session, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Unsubscribe(this NServiceBus.IMessageSession session, System.Type messageType, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task Unsubscribe<T>(this NServiceBus.IMessageSession session, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class MoveToError : NServiceBus.RecoverabilityAction
+    {
+        public string ErrorQueue { get; }
+    }
+    public class NServiceBusMarkerInterfaceConvention : NServiceBus.IMessageConvention
+    {
+        public NServiceBusMarkerInterfaceConvention() { }
+        public string Name { get; }
+        public bool IsCommandType(System.Type type) { }
+        public bool IsEventType(System.Type type) { }
+        public bool IsMessageType(System.Type type) { }
+    }
+    [System.Obsolete("Non-durable delivery support has been moved to the transports that can support it" +
+        ". See the upgrade guide for more details. Will be removed in version 9.0.0.", true)]
+    public class NonDurableDelivery
+    {
+        public NonDurableDelivery() { }
+    }
+    public class Notifications
+    {
+        public Notifications() { }
+        public NServiceBus.Faults.ErrorsNotifications Errors { get; }
+    }
+    public delegate System.Threading.Tasks.Task OnSatelliteMessage(System.IServiceProvider serviceProvider, NServiceBus.Transport.MessageContext messageContext, System.Threading.CancellationToken cancellationToken = default);
+    public static class OutboxConfigExtensions
+    {
+        public static NServiceBus.Outbox.OutboxSettings EnableOutbox(this NServiceBus.EndpointConfiguration config) { }
+    }
+    public class PendingTransportOperations
+    {
+        public PendingTransportOperations() { }
+        public bool HasOperations { get; }
+        public NServiceBus.Transport.TransportOperation[] Operations { get; }
+        public void Add(NServiceBus.Transport.TransportOperation transportOperation) { }
+        public void AddRange(NServiceBus.Transport.TransportOperation[] transportOperations) { }
+    }
+    public static class PersistenceConfig
+    {
+        public static NServiceBus.PersistenceExtensions UsePersistence(this NServiceBus.EndpointConfiguration config, System.Type definitionType) { }
+        public static NServiceBus.PersistenceExtensions<T> UsePersistence<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.Persistence.PersistenceDefinition { }
+        public static NServiceBus.PersistenceExtensions<T, S> UsePersistence<T, S>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.Persistence.PersistenceDefinition
+            where S : NServiceBus.StorageType { }
+    }
+    public class PersistenceExtensions : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public PersistenceExtensions(System.Type definitionType, NServiceBus.Settings.SettingsHolder settings, System.Type storageType) { }
+    }
+    public class PersistenceExtensions<T> : NServiceBus.PersistenceExtensions
+        where T : NServiceBus.Persistence.PersistenceDefinition
+    {
+        public PersistenceExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+        protected PersistenceExtensions(NServiceBus.Settings.SettingsHolder settings, System.Type storageType) { }
+    }
+    public class PersistenceExtensions<T, S> : NServiceBus.PersistenceExtensions<T>
+        where T : NServiceBus.Persistence.PersistenceDefinition
+        where S : NServiceBus.StorageType
+    {
+        public PersistenceExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+    }
+    public static class PipelineContextExtensions
+    {
+        public static System.Threading.Tasks.Task Publish(this NServiceBus.IPipelineContext context, object message) { }
+        public static System.Threading.Tasks.Task Publish<T>(this NServiceBus.IPipelineContext context) { }
+        public static System.Threading.Tasks.Task Publish<T>(this NServiceBus.IPipelineContext context, System.Action<T> messageConstructor) { }
+        public static System.Threading.Tasks.Task Send(this NServiceBus.IPipelineContext context, object message) { }
+        public static System.Threading.Tasks.Task Send(this NServiceBus.IPipelineContext context, string destination, object message) { }
+        public static System.Threading.Tasks.Task Send<T>(this NServiceBus.IPipelineContext context, System.Action<T> messageConstructor) { }
+        public static System.Threading.Tasks.Task Send<T>(this NServiceBus.IPipelineContext context, string destination, System.Action<T> messageConstructor) { }
+        public static System.Threading.Tasks.Task SendLocal(this NServiceBus.IPipelineContext context, object message) { }
+        public static System.Threading.Tasks.Task SendLocal<T>(this NServiceBus.IPipelineContext context, System.Action<T> messageConstructor) { }
+    }
+    public class PublishOptions : NServiceBus.Extensibility.ExtendableOptions
+    {
+        public PublishOptions() { }
+    }
+    public class ReceivePipelineCompleted
+    {
+        public ReceivePipelineCompleted(NServiceBus.Transport.IncomingMessage processedMessage, System.DateTimeOffset startedAt, System.DateTimeOffset completedAt) { }
+        public System.DateTimeOffset CompletedAt { get; }
+        public NServiceBus.Transport.IncomingMessage ProcessedMessage { get; }
+        public System.DateTimeOffset StartedAt { get; }
+    }
+    public static class ReceivePipelineConfigExtensions
+    {
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void OnReceivePipelineCompleted(this NServiceBus.Pipeline.PipelineSettings pipelineSettings, System.Func<NServiceBus.ReceivePipelineCompleted, System.Threading.Tasks.Task> subscription) { }
+        public static void OnReceivePipelineCompleted(this NServiceBus.Pipeline.PipelineSettings pipelineSettings, System.Func<NServiceBus.ReceivePipelineCompleted, System.Threading.CancellationToken, System.Threading.Tasks.Task> subscription) { }
+    }
+    public static class ReceiveSettingsExtensions
+    {
+        public static void MakeInstanceUniquelyAddressable(this NServiceBus.EndpointConfiguration config, string discriminator) { }
+        public static void OverrideLocalAddress(this NServiceBus.EndpointConfiguration config, string baseInputQueueName) { }
+    }
+    public abstract class RecoverabilityAction
+    {
+        protected RecoverabilityAction() { }
+        public static NServiceBus.DelayedRetry DelayedRetry(System.TimeSpan timeSpan) { }
+        public static NServiceBus.Discard Discard(string reason) { }
+        public static NServiceBus.ImmediateRetry ImmediateRetry() { }
+        public static NServiceBus.MoveToError MoveToError(string errorQueue) { }
+    }
+    public class RecoverabilityConfig
+    {
+        public RecoverabilityConfig(NServiceBus.ImmediateConfig immediateConfig, NServiceBus.DelayedConfig delayedConfig, NServiceBus.FailedConfig failedConfig) { }
+        public NServiceBus.DelayedConfig Delayed { get; }
+        public NServiceBus.FailedConfig Failed { get; }
+        public NServiceBus.ImmediateConfig Immediate { get; }
+    }
+    public static class RecoverabilityEndpointConfigurationExtensions
+    {
+        public static NServiceBus.RecoverabilitySettings Recoverability(this NServiceBus.EndpointConfiguration configuration) { }
+    }
+    public class RecoverabilitySettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public NServiceBus.RecoverabilitySettings AddUnrecoverableException(System.Type exceptionType) { }
+        public NServiceBus.RecoverabilitySettings AddUnrecoverableException<T>()
+            where T : System.Exception { }
+        public NServiceBus.RecoverabilitySettings CustomPolicy(System.Func<NServiceBus.RecoverabilityConfig, NServiceBus.Transport.ErrorContext, NServiceBus.RecoverabilityAction> custom) { }
+        public NServiceBus.RecoverabilitySettings Delayed(System.Action<NServiceBus.DelayedRetriesSettings> customizations) { }
+        public NServiceBus.RecoverabilitySettings Failed(System.Action<NServiceBus.RetryFailedSettings> customizations) { }
+        public NServiceBus.RecoverabilitySettings Immediate(System.Action<NServiceBus.ImmediateRetriesSettings> customizations) { }
+    }
+    public static class RecoverabilitySettingsExtensions
+    {
+        public static void AddUnrecoverableException(this NServiceBus.Settings.SettingsHolder settings, System.Type exceptionType) { }
+    }
+    public class ReplyOptions : NServiceBus.Extensibility.ExtendableOptions
+    {
+        public ReplyOptions() { }
+    }
+    public class RetryFailedSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public NServiceBus.RetryFailedSettings HeaderCustomization(System.Action<System.Collections.Generic.Dictionary<string, string>> customization) { }
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.RetryFailedSettings OnMessageSentToErrorQueue(System.Func<NServiceBus.Faults.FailedMessage, System.Threading.Tasks.Task> notificationCallback) { }
+        public NServiceBus.RetryFailedSettings OnMessageSentToErrorQueue(System.Func<NServiceBus.Faults.FailedMessage, System.Threading.CancellationToken, System.Threading.Tasks.Task> notificationCallback) { }
+    }
+    public static class RoutingFeatureSettingsExtensions
+    {
+        public static void OverridePublicReturnAddress(this NServiceBus.EndpointConfiguration configuration, string address) { }
+    }
+    public static class RoutingOptionExtensions
+    {
+        public static string GetDestination(this NServiceBus.ReplyOptions options) { }
+        public static string GetDestination(this NServiceBus.SendOptions options) { }
+        public static string GetReplyToRoute(this NServiceBus.ReplyOptions options) { }
+        public static string GetReplyToRoute(this NServiceBus.SendOptions options) { }
+        public static string GetRouteToSpecificInstance(this NServiceBus.SendOptions options) { }
+        public static bool IsRoutingReplyToAnyInstance(this NServiceBus.ReplyOptions options) { }
+        public static bool IsRoutingReplyToAnyInstance(this NServiceBus.SendOptions options) { }
+        public static bool IsRoutingReplyToThisInstance(this NServiceBus.ReplyOptions options) { }
+        public static bool IsRoutingReplyToThisInstance(this NServiceBus.SendOptions options) { }
+        public static bool IsRoutingToThisEndpoint(this NServiceBus.SendOptions options) { }
+        public static bool IsRoutingToThisInstance(this NServiceBus.SendOptions options) { }
+        public static void RouteReplyTo(this NServiceBus.ReplyOptions options, string address) { }
+        public static void RouteReplyTo(this NServiceBus.SendOptions options, string address) { }
+        public static void RouteReplyToAnyInstance(this NServiceBus.ReplyOptions options) { }
+        public static void RouteReplyToAnyInstance(this NServiceBus.SendOptions options) { }
+        public static void RouteReplyToThisInstance(this NServiceBus.ReplyOptions options) { }
+        public static void RouteReplyToThisInstance(this NServiceBus.SendOptions options) { }
+        public static void RouteToSpecificInstance(this NServiceBus.SendOptions options, string instanceId) { }
+        public static void RouteToThisEndpoint(this NServiceBus.SendOptions options) { }
+        public static void RouteToThisInstance(this NServiceBus.SendOptions options) { }
+        public static void SetDestination(this NServiceBus.ReplyOptions options, string destination) { }
+        public static void SetDestination(this NServiceBus.SendOptions options, string destination) { }
+    }
+    public class RoutingSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public RoutingSettings(NServiceBus.Settings.SettingsHolder settings) { }
+        public void DoNotEnforceBestPractices() { }
+        public void RouteToEndpoint(System.Reflection.Assembly assembly, string destination) { }
+        public void RouteToEndpoint(System.Type messageType, string destination) { }
+        public void RouteToEndpoint(System.Reflection.Assembly assembly, string @namespace, string destination) { }
+    }
+    public static class RoutingSettingsExtensions
+    {
+        [System.Obsolete("Use `EndpointConfiguration.UseTransport` instead. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.RoutingSettings Routing(this NServiceBus.TransportExtensions config) { }
+        [System.Obsolete("Use `EndpointConfiguration.UseTransport` instead. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.RoutingSettings<T> Routing<T>(this NServiceBus.TransportExtensions<T> config)
+            where T : NServiceBus.Transport.TransportDefinition { }
+    }
+    public class RoutingSettings<T> : NServiceBus.RoutingSettings
+        where T : NServiceBus.Transport.TransportDefinition
+    {
+        public RoutingSettings(NServiceBus.Settings.SettingsHolder settings) { }
+    }
+    public abstract class Saga
+    {
+        protected Saga() { }
+        public bool Completed { get; }
+        public NServiceBus.IContainSagaData Entity { get; set; }
+        protected abstract void ConfigureHowToFindSaga(NServiceBus.IConfigureHowToFindSagaWithMessage sagaMessageFindingConfiguration);
+        protected void MarkAsComplete() { }
+        protected System.Threading.Tasks.Task ReplyToOriginator(NServiceBus.IMessageHandlerContext context, object message, System.Collections.Generic.IReadOnlyDictionary<string, string> outgoingHeaders = null) { }
+        protected System.Threading.Tasks.Task RequestTimeout<TTimeoutMessageType>(NServiceBus.IMessageHandlerContext context, System.DateTimeOffset at)
+            where TTimeoutMessageType : new() { }
+        protected System.Threading.Tasks.Task RequestTimeout<TTimeoutMessageType>(NServiceBus.IMessageHandlerContext context, System.TimeSpan within)
+            where TTimeoutMessageType : new() { }
+        protected System.Threading.Tasks.Task RequestTimeout<TTimeoutMessageType>(NServiceBus.IMessageHandlerContext context, System.DateTimeOffset at, TTimeoutMessageType timeoutMessage) { }
+        protected System.Threading.Tasks.Task RequestTimeout<TTimeoutMessageType>(NServiceBus.IMessageHandlerContext context, System.TimeSpan within, TTimeoutMessageType timeoutMessage) { }
+    }
+    public class SagaPropertyMapper<TSagaData>
+        where TSagaData :  class, NServiceBus.IContainSagaData
+    {
+        public NServiceBus.IToSagaExpression<TSagaData> ConfigureHeaderMapping<TMessage>(string headerName) { }
+        public NServiceBus.ToSagaExpression<TSagaData, TMessage> ConfigureMapping<TMessage>(System.Linq.Expressions.Expression<System.Func<TMessage, object>> messageProperty) { }
+        public NServiceBus.CorrelatedSagaPropertyMapper<TSagaData> MapSaga(System.Linq.Expressions.Expression<System.Func<TSagaData, object>> sagaProperty) { }
+    }
+    public abstract class Saga<TSagaData> : NServiceBus.Saga
+        where TSagaData :  class, NServiceBus.IContainSagaData, new ()
+    {
+        protected Saga() { }
+        public TSagaData Data { get; set; }
+        protected override void ConfigureHowToFindSaga(NServiceBus.IConfigureHowToFindSagaWithMessage sagaMessageFindingConfiguration) { }
+        protected abstract void ConfigureHowToFindSaga(NServiceBus.SagaPropertyMapper<TSagaData> mapper);
+    }
+    public static class SagasConfigExtensions
+    {
+        public static NServiceBus.Sagas.SagaSettings Sagas(this NServiceBus.EndpointConfiguration config) { }
+    }
+    [System.Obsolete("The built-in scheduler is no longer supported, see our upgrade guide for details " +
+        "on how to migrate to plain .NET Timers. Will be removed in version 9.0.0.", true)]
+    public static class ScheduleExtensions
+    {
+        public static System.Threading.Tasks.Task ScheduleEvery(this NServiceBus.IMessageSession session, System.TimeSpan timeSpan, System.Func<NServiceBus.IPipelineContext, System.Threading.Tasks.Task> task) { }
+        public static System.Threading.Tasks.Task ScheduleEvery(this NServiceBus.IMessageSession session, System.TimeSpan timeSpan, string name, System.Func<NServiceBus.IPipelineContext, System.Threading.Tasks.Task> task) { }
+    }
+    [System.Obsolete("The built-in scheduler is no longer supported, see our upgrade guide for details " +
+        "on how to migrate to plain .NET Timers. Will be removed in version 9.0.0.", true)]
+    public class ScheduledTask { }
+    public class SendOptions : NServiceBus.Extensibility.ExtendableOptions
+    {
+        public SendOptions() { }
+    }
+    public static class SerializationConfigExtensions
+    {
+        public static NServiceBus.Serialization.SerializationExtensions<T> AddDeserializer<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.Serialization.SerializationDefinition, new () { }
+        public static NServiceBus.Serialization.SerializationExtensions<T> AddDeserializer<T>(this NServiceBus.EndpointConfiguration config, T serializationDefinition)
+            where T : NServiceBus.Serialization.SerializationDefinition { }
+        public static NServiceBus.Serialization.SerializationExtensions<T> UseSerialization<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.Serialization.SerializationDefinition, new () { }
+        public static NServiceBus.Serialization.SerializationExtensions<T> UseSerialization<T>(this NServiceBus.EndpointConfiguration config, T serializationDefinition)
+            where T : NServiceBus.Serialization.SerializationDefinition { }
+    }
+    public static class SerializationContextExtensions
+    {
+        public static bool ShouldSkipSerialization(this NServiceBus.Pipeline.IOutgoingLogicalMessageContext context) { }
+        public static void SkipSerialization(this NServiceBus.Pipeline.IOutgoingLogicalMessageContext context) { }
+    }
+    [System.Obsolete("Use methods on IServiceCollection instead. Will be treated as an error from versi" +
+        "on 9.0.0. Will be removed in version 10.0.0.", false)]
+    public static class ServiceCollectionExtensions
+    {
+        [System.Obsolete("Use `IServiceCollection.Add` instead. Will be treated as an error from version 9." +
+            "0.0. Will be removed in version 10.0.0.", false)]
+        public static void ConfigureComponent(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, System.Type concreteComponent, NServiceBus.DependencyLifecycle dependencyLifecycle) { }
+        [System.Obsolete("Use `IServiceCollection.Add`, `IServiceCollection.AddSingleton`, `IServiceCollect" +
+            "ion.AddTransient` or `IServiceCollection.AddScoped` instead. Will be treated as " +
+            "an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static void ConfigureComponent<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, NServiceBus.DependencyLifecycle dependencyLifecycle) { }
+        [System.Obsolete("Use `IServiceCollection.Add`, `IServiceCollection.AddSingleton`, `IServiceCollect" +
+            "ion.AddTransient` or `IServiceCollection.AddScoped` instead. Will be treated as " +
+            "an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static void ConfigureComponent<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, System.Func<T> componentFactory, NServiceBus.DependencyLifecycle dependencyLifecycle) { }
+        [System.Obsolete("Use `IServiceCollection.Add`, `IServiceCollection.AddSingleton`, `IServiceCollect" +
+            "ion.AddTransient` or `IServiceCollection.AddScoped` instead. Will be treated as " +
+            "an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static void ConfigureComponent<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, System.Func<System.IServiceProvider, T> componentFactory, NServiceBus.DependencyLifecycle dependencyLifecycle) { }
+        [System.Obsolete("Use `IServiceCollection.GetEnumerator` instead. Will be treated as an error from " +
+            "version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static bool HasComponent(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, System.Type componentType) { }
+        [System.Obsolete("Use `IServiceCollection.GetEnumerator` instead. Will be treated as an error from " +
+            "version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static bool HasComponent<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection) { }
+        [System.Obsolete("Use `IServiceCollection.Add`, `IServiceCollection.AddSingleton`, `IServiceCollect" +
+            "ion.AddTransient` or `IServiceCollection.AddScoped` instead. Will be treated as " +
+            "an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static void RegisterSingleton(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, System.Type lookupType, object instance) { }
+        [System.Obsolete("Use `IServiceCollection.AddSingleton` instead. Will be treated as an error from v" +
+            "ersion 9.0.0. Will be removed in version 10.0.0.", false)]
+        public static void RegisterSingleton<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, T instance) { }
+    }
+    public static class SettingsExtensions
+    {
+        public static string EndpointName(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        public static string EndpointQueueName(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        public static System.Collections.Generic.IList<System.Type> GetAvailableTypes(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        public static string InstanceSpecificQueue(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        public static string LocalAddress(this NServiceBus.Settings.ReadOnlySettings settings) { }
+        [System.Obsolete("Use `SettingsExtensions.EndpointQueueName` instead. The member currently throws a" +
+            " NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.LogicalAddress LogicalAddress(this NServiceBus.Settings.ReadOnlySettings settings) { }
+    }
+    public class StartupDiagnosticEntries
+    {
+        public StartupDiagnosticEntries() { }
+        public void Add(string sectionName, object section) { }
+        public class StartupDiagnosticEntry
+        {
+            public StartupDiagnosticEntry() { }
+            public object Data { get; set; }
+            public string Name { get; set; }
+        }
+    }
+    public static class StaticHeadersConfigExtensions
+    {
+        public static void AddHeaderToAllOutgoingMessages(this NServiceBus.EndpointConfiguration config, string key, string value) { }
+    }
+    public abstract class StorageType
+    {
+        public override string ToString() { }
+        [System.Obsolete("Gateway persistence has been moved to the NServiceBus.Gateway dedicated package. " +
+            "Will be removed in version 9.0.0.", true)]
+        public sealed class GatewayDeduplication { }
+        public sealed class Outbox : NServiceBus.StorageType { }
+        public sealed class Sagas : NServiceBus.StorageType { }
+        public sealed class Subscriptions : NServiceBus.StorageType { }
+        [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+            "provided by transports. See the upgrade guide for more details. Will be removed " +
+            "in version 9.0.0.", true)]
+        public sealed class Timeouts { }
+    }
+    public class SubscribeOptions : NServiceBus.Extensibility.ExtendableOptions
+    {
+        public SubscribeOptions() { }
+    }
+    public class SubscriptionMigrationModeSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public SubscriptionMigrationModeSettings(NServiceBus.Settings.SettingsHolder settings) { }
+        public void RegisterPublisher(System.Reflection.Assembly assembly, string publisherEndpoint) { }
+        public void RegisterPublisher(System.Type eventType, string publisherEndpoint) { }
+        public void RegisterPublisher(System.Reflection.Assembly assembly, string @namespace, string publisherEndpoint) { }
+        public void SubscriptionAuthorizer(System.Func<NServiceBus.Pipeline.IIncomingPhysicalMessageContext, bool> authorizer) { }
+    }
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Interface | System.AttributeTargets.All)]
+    public sealed class TimeToBeReceivedAttribute : System.Attribute
+    {
+        public TimeToBeReceivedAttribute(string timeSpan) { }
+        public System.TimeSpan TimeToBeReceived { get; }
+    }
+    public static class TimeToBeReceivedConventionExtensions
+    {
+        public static NServiceBus.ConventionsBuilder DefiningTimeToBeReceivedAs(this NServiceBus.ConventionsBuilder builder, System.Func<System.Type, System.TimeSpan> retrieveTimeToBeReceived) { }
+    }
+    public class TimeoutManagerConfiguration { }
+    [System.Obsolete("The timeout manager has been removed. See the upgrade guide for more details. Wil" +
+        "l be removed in version 9.0.0.", true)]
+    public static class TimeoutManagerConfigurationExtensions
+    {
+        [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+            "provided by transports. See the upgrade guide for more details. The member curre" +
+            "ntly throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void LimitMessageProcessingConcurrencyTo(this NServiceBus.TimeoutManagerConfiguration timeoutManagerConfiguration, int maxConcurrency) { }
+        [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+            "provided by transports. See the upgrade guide for more details. The member curre" +
+            "ntly throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.TimeoutManagerConfiguration TimeoutManager(this NServiceBus.EndpointConfiguration endpointConfiguration) { }
+    }
+    public class ToSagaExpression<TSagaData, TMessage>
+        where TSagaData :  class, NServiceBus.IContainSagaData
+    {
+        public ToSagaExpression(NServiceBus.IConfigureHowToFindSagaWithMessage sagaMessageFindingConfiguration, System.Linq.Expressions.Expression<System.Func<TMessage, object>> messageProperty) { }
+        public void ToSaga(System.Linq.Expressions.Expression<System.Func<TSagaData, object>> sagaEntityProperty) { }
+    }
+    [System.Obsolete("Configure the transport via the TransportDefinition instance\'s properties. Will b" +
+        "e treated as an error from version 9.0.0. Will be removed in version 9.0.0.", false)]
+    public class TransportExtensions : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        [System.Obsolete("Configure the transport via the TransportDefinition instance\'s properties. Will b" +
+            "e removed in version 9.0.0.", true)]
+        public TransportExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+        [System.Obsolete("Setting connection string at the endpoint level is no longer supported. Transport" +
+            " specific configuration options should be used instead. The member currently thr" +
+            "ows a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.TransportExtensions ConnectionString(System.Func<string> connectionString) { }
+        [System.Obsolete("Setting connection string at the endpoint level is no longer supported. Transport" +
+            " specific configuration options should be used instead. The member currently thr" +
+            "ows a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.TransportExtensions ConnectionString(string connectionString) { }
+        [System.Obsolete(@"The ability to used named connection strings has been removed. Instead, load the connection string in your code and pass the value to TransportExtensions.ConnectionString(connectionString). Use `TransportExtensions.ConnectionString(connectionString)` instead. The member currently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.TransportExtensions ConnectionStringName(string name) { }
+        [System.Obsolete("Use `TransportDefinition.TransportTransactionMode` instead. The member currently " +
+            "throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.TransportExtensions Transactions(NServiceBus.TransportTransactionMode transportTransactionMode) { }
+    }
+    [System.Obsolete("Configure the transport via the TransportDefinition instance\'s properties. Will b" +
+        "e treated as an error from version 9.0.0. Will be removed in version 9.0.0.", false)]
+    public class TransportExtensions<T> : NServiceBus.TransportExtensions
+        where T : NServiceBus.Transport.TransportDefinition
+    {
+        [System.Obsolete("Configure the transport via the TransportDefinition instance\'s properties. The me" +
+            "mber currently throws a NotImplementedException. Will be removed in version 9.0." +
+            "0.", true)]
+        public TransportExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+        [System.Obsolete("Setting connection string at the endpoint level is no longer supported. Transport" +
+            " specific configuration options should be used instead. The member currently thr" +
+            "ows a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.TransportExtensions<T> ConnectionString(System.Func<string> connectionString) { }
+        [System.Obsolete("Setting connection string at the endpoint level is no longer supported. Transport" +
+            " specific configuration options should be used instead. The member currently thr" +
+            "ows a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public new NServiceBus.TransportExtensions<T> ConnectionString(string connectionString) { }
+        [System.Obsolete("Loading named connection strings is no longer supported. Use `TransportExtensions" +
+            "<T>.ConnectionString(connectionString)` instead. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public new NServiceBus.TransportExtensions<T> ConnectionStringName(string name) { }
+        [System.Obsolete("Use `TransportDefinition.TransportTransactionMode` instead. The member currently " +
+            "throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public new NServiceBus.TransportExtensions<T> Transactions(NServiceBus.TransportTransactionMode transportTransactionMode) { }
+    }
+    public abstract class TransportSettings<T>
+        where T : NServiceBus.Transport.TransportDefinition
+    {
+        protected readonly T Transport;
+        protected TransportSettings(T transport, NServiceBus.RoutingSettings<T> routing) { }
+        [System.Obsolete("Use `Use EndpointConfiguration.UseTransport() to access routing settings` instead" +
+            ". Will be treated as an error from version 9.0.0. Will be removed in version 10." +
+            "0.0.", false)]
+        public NServiceBus.RoutingSettings<T> Routing() { }
+        [System.Obsolete("Use `TransportDefinition.TransportTransactionMode` instead. Will be treated as an" +
+            " error from version 9.0.0. Will be removed in version 9.0.0.", false)]
+        public NServiceBus.TransportSettings<T> Transactions(NServiceBus.TransportTransactionMode transportTransactionMode) { }
+    }
+    public enum TransportTransactionMode
+    {
+        None = 0,
+        ReceiveOnly = 1,
+        SendsAtomicWithReceive = 2,
+        TransactionScope = 3,
+    }
+    public class UnitOfWorkSettings
+    {
+        public NServiceBus.UnitOfWorkSettings WrapHandlersInATransactionScope(System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
+    }
+    public static class UnitOfWorkSettingsExtensions
+    {
+        public static NServiceBus.UnitOfWorkSettings UnitOfWork(this NServiceBus.EndpointConfiguration config) { }
+    }
+    public class UnsubscribeOptions : NServiceBus.Extensibility.ExtendableOptions
+    {
+        public UnsubscribeOptions() { }
+    }
+    public static class UseDataBusExtensions
+    {
+        public static NServiceBus.DataBus.DataBusExtensions UseDataBus(this NServiceBus.EndpointConfiguration config, System.Type dataBusType) { }
+        public static NServiceBus.DataBus.DataBusExtensions<T> UseDataBus<T>(this NServiceBus.EndpointConfiguration config)
+            where T : NServiceBus.DataBus.DataBusDefinition, new () { }
+    }
+    [System.Obsolete("Use `EndpointConfiguration.UseTransport(TransportDefinition)` instead. Will be re" +
+        "moved in version 9.0.0.", true)]
+    public static class UseTransportExtensions
+    {
+        [System.Obsolete("Use `EndpointConfiguration.UseTransport(TransportDefinition)` instead. The member" +
+            " currently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static NServiceBus.TransportExtensions UseTransport(this NServiceBus.EndpointConfiguration endpointConfiguration, System.Type transportDefinitionType) { }
+    }
+    public static class XmlSerializationExtensions
+    {
+        public static NServiceBus.Serialization.SerializationExtensions<NServiceBus.XmlSerializer> DontWrapRawXml(this NServiceBus.Serialization.SerializationExtensions<NServiceBus.XmlSerializer> config) { }
+        public static NServiceBus.Serialization.SerializationExtensions<NServiceBus.XmlSerializer> Namespace(this NServiceBus.Serialization.SerializationExtensions<NServiceBus.XmlSerializer> config, string namespaceToUse) { }
+        public static NServiceBus.Serialization.SerializationExtensions<NServiceBus.XmlSerializer> SanitizeInput(this NServiceBus.Serialization.SerializationExtensions<NServiceBus.XmlSerializer> config) { }
+    }
+    public class XmlSerializer : NServiceBus.Serialization.SerializationDefinition
+    {
+        public XmlSerializer() { }
+        public override System.Func<NServiceBus.MessageInterfaces.IMessageMapper, NServiceBus.Serialization.IMessageSerializer> Configure(NServiceBus.Settings.ReadOnlySettings settings) { }
+    }
+}
+namespace NServiceBus.AutomaticSubscriptions.Config
+{
+    public class AutoSubscribeSettings
+    {
+        public NServiceBus.AutomaticSubscriptions.Config.AutoSubscribeSettings DisableFor(System.Type eventType) { }
+        public NServiceBus.AutomaticSubscriptions.Config.AutoSubscribeSettings DisableFor<T>() { }
+        public void DoNotAutoSubscribeSagas() { }
+    }
+}
+namespace NServiceBus.Configuration.AdvancedExtensibility
+{
+    public static class AdvancedExtensibilityExtensions
+    {
+        public static NServiceBus.Settings.SettingsHolder GetSettings(this NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings config) { }
+    }
+    public abstract class ExposeSettings
+    {
+        protected ExposeSettings(NServiceBus.Settings.SettingsHolder settings) { }
+    }
+}
+namespace NServiceBus.ConsistencyGuarantees
+{
+    public static class TransactionModeSettingsExtensions
+    {
+        public static NServiceBus.TransportTransactionMode GetRequiredTransactionModeForReceives(this NServiceBus.Settings.ReadOnlySettings settings) { }
+    }
+}
+namespace NServiceBus.Container
+{
+    [System.Obsolete("The NServiceBus dependency injection container API has been deprecated. Use the e" +
+        "xternally managed container mode to use custom containers. Will be removed in ve" +
+        "rsion 9.0.0.", true)]
+    public class ContainerCustomizations { }
+    [System.Obsolete("The NServiceBus dependency injection container API has been deprecated. Use the e" +
+        "xternally managed container mode to use custom containers. Will be removed in ve" +
+        "rsion 9.0.0.", true)]
+    public abstract class ContainerDefinition
+    {
+        protected ContainerDefinition() { }
+    }
+}
+namespace NServiceBus.DataBus
+{
+    public abstract class DataBusDefinition
+    {
+        protected DataBusDefinition() { }
+        protected abstract System.Type ProvidedByFeature();
+    }
+    public class DataBusExtensions : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public DataBusExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+    }
+    public class DataBusExtensions<T> : NServiceBus.DataBus.DataBusExtensions
+        where T : NServiceBus.DataBus.DataBusDefinition
+    {
+        public DataBusExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+    }
+    public interface IDataBus
+    {
+        System.Threading.Tasks.Task<System.IO.Stream> Get(string key, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> Put(System.IO.Stream stream, System.TimeSpan timeToBeReceived, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Start(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IDataBusSerializer
+    {
+        object Deserialize(System.IO.Stream stream);
+        void Serialize(object databusProperty, System.IO.Stream stream);
+    }
+}
+namespace NServiceBus.DelayedDelivery
+{
+    public class DelayDeliveryWith
+    {
+        public DelayDeliveryWith(System.TimeSpan delay) { }
+        public System.TimeSpan Delay { get; }
+    }
+    public class DoNotDeliverBefore
+    {
+        public DoNotDeliverBefore(System.DateTimeOffset at) { }
+        public System.DateTimeOffset At { get; }
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public static class ExternalTimeoutManagerConfigurationExtensions
+    {
+        [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+            "provided by transports. See the upgrade guide for more details. The member curre" +
+            "ntly throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void UseExternalTimeoutManager(this NServiceBus.EndpointConfiguration endpointConfiguration, string externalTimeoutManagerAddress) { }
+    }
+}
+namespace NServiceBus.DeliveryConstraints
+{
+    [System.Obsolete("Use `DispatchProperties` instead. Will be removed in version 9.0.0.", true)]
+    public abstract class DeliveryConstraint
+    {
+        [System.Obsolete("Will be removed in version 9.0.0.", true)]
+        protected DeliveryConstraint() { }
+    }
+    public static class DeliveryConstraintContextExtensions
+    {
+        [System.Obsolete("Use `DispatchProperties` instead. The member currently throws a NotImplementedExc" +
+            "eption. Will be removed in version 9.0.0.", true)]
+        public static void AddDeliveryConstraint(this NServiceBus.Extensibility.ContextBag context, NServiceBus.DeliveryConstraints.DeliveryConstraint constraint) { }
+        [System.Obsolete("Use `DispatchProperties` instead. The member currently throws a NotImplementedExc" +
+            "eption. Will be removed in version 9.0.0.", true)]
+        public static System.Collections.Generic.List<NServiceBus.DeliveryConstraints.DeliveryConstraint> GetDeliveryConstraints(this NServiceBus.Extensibility.ContextBag context) { }
+        [System.Obsolete("Use `DispatchProperties` instead. The member currently throws a NotImplementedExc" +
+            "eption. Will be removed in version 9.0.0.", true)]
+        public static void RemoveDeliveryConstraint(this NServiceBus.Extensibility.ContextBag context, NServiceBus.DeliveryConstraints.DeliveryConstraint constraint) { }
+        [System.Obsolete("Use `DispatchProperties` instead. The member currently throws a NotImplementedExc" +
+            "eption. Will be removed in version 9.0.0.", true)]
+        public static bool TryGetDeliveryConstraint<T>(this NServiceBus.Extensibility.ContextBag context, out T constraint)
+            where T : NServiceBus.DeliveryConstraints.DeliveryConstraint { }
+        [System.Obsolete("Use `DispatchProperties` instead. The member currently throws a NotImplementedExc" +
+            "eption. Will be removed in version 9.0.0.", true)]
+        public static bool TryRemoveDeliveryConstraint<T>(this NServiceBus.Extensibility.ContextBag context, out T constraint)
+            where T : NServiceBus.DeliveryConstraints.DeliveryConstraint { }
+    }
+}
+namespace NServiceBus.Extensibility
+{
+    public class ContextBag : NServiceBus.Extensibility.ReadOnlyContextBag
+    {
+        public ContextBag(NServiceBus.Extensibility.ContextBag parentBag = null) { }
+        public T Get<T>() { }
+        public T Get<T>(string key) { }
+        public T GetOrCreate<T>()
+            where T :  class, new () { }
+        public void Remove(string key) { }
+        public void Remove<T>() { }
+        public void Set<T>(T t) { }
+        public void Set<T>(string key, T t) { }
+        public bool TryGet<T>(out T result) { }
+        public bool TryGet<T>(string key, out T result) { }
+    }
+    public abstract class ExtendableOptions
+    {
+        protected ExtendableOptions() { }
+    }
+    public static class ExtendableOptionsExtensions
+    {
+        public static NServiceBus.Transport.DispatchProperties GetDispatchProperties(this NServiceBus.Extensibility.ExtendableOptions options) { }
+        public static NServiceBus.Extensibility.ContextBag GetExtensions(this NServiceBus.Extensibility.ExtendableOptions options) { }
+    }
+    public interface IExtendable
+    {
+        NServiceBus.Extensibility.ContextBag Extensions { get; }
+    }
+    public interface ReadOnlyContextBag
+    {
+        T Get<T>();
+        T Get<T>(string key);
+        bool TryGet<T>(out T result);
+        bool TryGet<T>(string key, out T result);
+    }
+}
+namespace NServiceBus.Faults
+{
+    public class DelayedRetryMessage
+    {
+        public DelayedRetryMessage(string messageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body, System.Exception exception, int retryAttempt) { }
+        public byte[] Body { get; }
+        public System.Exception Exception { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string MessageId { get; }
+        public int RetryAttempt { get; }
+    }
+    public class ErrorsNotifications
+    {
+        public ErrorsNotifications() { }
+        [System.Obsolete("The .NET event based error notifications will be deprecated in favor of Task-base" +
+            "d callbacks. Use endpointConfiguration.Recoverability().Delayed(settings => sett" +
+            "ings.OnMessageBeingRetried(callback)) instead. Will be removed in version 9.0.0." +
+            "", true)]
+        public event System.EventHandler<NServiceBus.Faults.DelayedRetryMessage> MessageHasBeenSentToDelayedRetries;
+        [System.Obsolete("The .NET event based error notifications will be deprecated in favor of Task-base" +
+            "d callbacks. Use endpointConfiguration.Recoverability().Immediate(settings => se" +
+            "ttings.OnMessageBeingRetried(callback)) instead. Will be removed in version 9.0." +
+            "0.", true)]
+        public event System.EventHandler<NServiceBus.Faults.ImmediateRetryMessage> MessageHasFailedAnImmediateRetryAttempt;
+        [System.Obsolete("The .NET event based error notifications will be deprecated in favor of Task-base" +
+            "d callbacks. Use endpointConfiguration.Recoverability().Failed(settings => setti" +
+            "ngs.OnMessageSentToErrorQueue(callback)) instead. Will be removed in version 9.0" +
+            ".0.", true)]
+        public event System.EventHandler<NServiceBus.Faults.FailedMessage> MessageSentToErrorQueue;
+    }
+    public class FailedMessage
+    {
+        public FailedMessage(string messageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body, System.Exception exception, string errorQueue) { }
+        public byte[] Body { get; }
+        public string ErrorQueue { get; }
+        public System.Exception Exception { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string MessageId { get; }
+    }
+    public static class FaultsHeaderKeys
+    {
+        public const string FailedQ = "NServiceBus.FailedQ";
+    }
+    public class ImmediateRetryMessage
+    {
+        public ImmediateRetryMessage(string messageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body, System.Exception exception, int retryAttempt) { }
+        public byte[] Body { get; }
+        public System.Exception Exception { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string MessageId { get; }
+        public int RetryAttempt { get; }
+    }
+}
+namespace NServiceBus.Features
+{
+    public class Audit : NServiceBus.Features.Feature
+    {
+        protected override void Setup(NServiceBus.Features.FeatureConfigurationContext context) { }
+    }
+    public class AutoSubscribe : NServiceBus.Features.Feature
+    {
+        protected override void Setup(NServiceBus.Features.FeatureConfigurationContext context) { }
+    }
+    public class DataBus : NServiceBus.Features.Feature
+    {
+        protected override void Setup(NServiceBus.Features.FeatureConfigurationContext context) { }
+    }
+    public abstract class Feature
+    {
+        protected Feature() { }
+        public bool IsActive { get; }
+        public bool IsEnabledByDefault { get; }
+        public string Name { get; }
+        public string Version { get; }
+        protected void Defaults(System.Action<NServiceBus.Settings.SettingsHolder> settings) { }
+        protected void DependsOn(string featureTypeName) { }
+        protected void DependsOn<T>()
+            where T : NServiceBus.Features.Feature { }
+        protected void DependsOnAtLeastOne(params string[] featureNames) { }
+        protected void DependsOnAtLeastOne(params System.Type[] features) { }
+        protected void DependsOnOptionally(string featureName) { }
+        protected void DependsOnOptionally(System.Type featureType) { }
+        protected void DependsOnOptionally<T>()
+            where T : NServiceBus.Features.Feature { }
+        protected void EnableByDefault() { }
+        protected void Prerequisite(System.Func<NServiceBus.Features.FeatureConfigurationContext, bool> condition, string description) { }
+        protected abstract void Setup(NServiceBus.Features.FeatureConfigurationContext context);
+        public override string ToString() { }
+    }
+    public class FeatureConfigurationContext
+    {
+        [System.Obsolete("Use `Services` instead. Will be treated as an error from version 9.0.0. Will be r" +
+            "emoved in version 10.0.0.", false)]
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Container { get; }
+        public NServiceBus.Pipeline.PipelineSettings Pipeline { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public NServiceBus.Settings.ReadOnlySettings Settings { get; }
+        public void AddSatelliteReceiver(string name, string transportAddress, NServiceBus.Transport.PushRuntimeSettings runtimeSettings, System.Func<NServiceBus.RecoverabilityConfig, NServiceBus.Transport.ErrorContext, NServiceBus.RecoverabilityAction> recoverabilityPolicy, NServiceBus.OnSatelliteMessage onMessage) { }
+        public void RegisterStartupTask<TTask>(System.Func<TTask> startupTaskFactory)
+            where TTask : NServiceBus.Features.FeatureStartupTask { }
+        public void RegisterStartupTask<TTask>(System.Func<System.IServiceProvider, TTask> startupTaskFactory)
+            where TTask : NServiceBus.Features.FeatureStartupTask { }
+        public void RegisterStartupTask<TTask>(TTask startupTask)
+            where TTask : NServiceBus.Features.FeatureStartupTask { }
+    }
+    public abstract class FeatureStartupTask
+    {
+        protected FeatureStartupTask() { }
+        protected abstract System.Threading.Tasks.Task OnStart(NServiceBus.IMessageSession session, System.Threading.CancellationToken cancellationToken = default);
+        protected abstract System.Threading.Tasks.Task OnStop(NServiceBus.IMessageSession session, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public enum FeatureState
+    {
+        Disabled = 0,
+        Enabled = 1,
+        Active = 2,
+        Deactivated = 3,
+    }
+    [System.Obsolete("Message forwarding is no longer supported, but can be implemented as a custom pip" +
+        "eline behavior. Will be removed in version 9.0.0.", true)]
+    public class ForwardReceivedMessages { }
+    [System.Obsolete("Gateway persistence has been moved to the NServiceBus.Gateway dedicated package. " +
+        "Will be removed in version 9.0.0.", true)]
+    public class InMemoryGatewayPersistence { }
+    [System.Obsolete(@"It's not recommended to disable the MessageDrivenSubscriptions feature and this option will be removed in future versions. Use 'TransportExtensions<T>.DisablePublishing()' to avoid the need for a subscription storage if this endpoint does not publish events. Will be treated as an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+    public class MessageDrivenSubscriptions : NServiceBus.Features.Feature
+    {
+        protected override void Setup(NServiceBus.Features.FeatureConfigurationContext context) { }
+    }
+    public class Outbox : NServiceBus.Features.Feature
+    {
+        protected override void Setup(NServiceBus.Features.FeatureConfigurationContext context) { }
+    }
+    public class Sagas : NServiceBus.Features.Feature
+    {
+        protected override void Setup(NServiceBus.Features.FeatureConfigurationContext context) { }
+    }
+    [System.Obsolete("The built-in scheduler is no longer supported, see our upgrade guide for details " +
+        "on how to migrate to plain .NET Timers. Will be removed in version 9.0.0.", true)]
+    public class Scheduler
+    {
+        public Scheduler() { }
+    }
+    public static class SettingsExtensions
+    {
+        public static NServiceBus.Settings.SettingsHolder EnableFeatureByDefault(this NServiceBus.Settings.SettingsHolder settings, System.Type featureType) { }
+        public static NServiceBus.Settings.SettingsHolder EnableFeatureByDefault<T>(this NServiceBus.Settings.SettingsHolder settings)
+            where T : NServiceBus.Features.Feature { }
+        public static bool IsFeatureActive(this NServiceBus.Settings.ReadOnlySettings settings, System.Type featureType) { }
+        public static bool IsFeatureEnabled(this NServiceBus.Settings.ReadOnlySettings settings, System.Type featureType) { }
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public class TimeoutManager { }
+}
+namespace NServiceBus.Gateway.Deduplication
+{
+    [System.Obsolete("Gateway persistence has been moved to the NServiceBus.Gateway dedicated package. " +
+        "Will be removed in version 9.0.0.", true)]
+    public interface IDeduplicateMessages
+    {
+        System.Threading.Tasks.Task<bool> DeduplicateMessage(string clientId, System.DateTime timeReceived, NServiceBus.Extensibility.ContextBag context);
+    }
+}
+namespace NServiceBus.Hosting.Helpers
+{
+    public class AssemblyScanner
+    {
+        public AssemblyScanner() { }
+        public AssemblyScanner(string baseDirectoryToScan) { }
+        public bool ScanAppDomainAssemblies { get; set; }
+        public bool ThrowExceptions { get; set; }
+        public NServiceBus.Hosting.Helpers.AssemblyScannerResults GetScannableAssemblies() { }
+    }
+    public class AssemblyScannerResults
+    {
+        public AssemblyScannerResults() { }
+        public System.Collections.Generic.List<System.Reflection.Assembly> Assemblies { get; }
+        public bool ErrorsThrownDuringScanning { get; }
+        public System.Collections.Generic.List<NServiceBus.Hosting.Helpers.SkippedFile> SkippedFiles { get; }
+        public System.Collections.Generic.List<System.Type> Types { get; }
+    }
+    public class SkippedFile
+    {
+        public string FilePath { get; }
+        public string SkipReason { get; }
+    }
+}
+namespace NServiceBus.Hosting
+{
+    public class HostInformation
+    {
+        public HostInformation(System.Guid hostId, string displayName) { }
+        public HostInformation(System.Guid hostId, string displayName, System.Collections.Generic.Dictionary<string, string> properties) { }
+        public string DisplayName { get; }
+        public System.Guid HostId { get; }
+        public System.Collections.Generic.Dictionary<string, string> Properties { get; }
+    }
+}
+namespace NServiceBus.Installation
+{
+    public interface INeedToInstallSomething
+    {
+        System.Threading.Tasks.Task Install(string identity, System.Threading.CancellationToken cancellationToken = default);
+    }
+}
+namespace NServiceBus.Logging
+{
+    public class DefaultFactory : NServiceBus.Logging.LoggingFactoryDefinition
+    {
+        public DefaultFactory() { }
+        public void Directory(string directory) { }
+        protected override NServiceBus.Logging.ILoggerFactory GetLoggingFactory() { }
+        public void Level(NServiceBus.Logging.LogLevel level) { }
+    }
+    public interface ILog
+    {
+        bool IsDebugEnabled { get; }
+        bool IsErrorEnabled { get; }
+        bool IsFatalEnabled { get; }
+        bool IsInfoEnabled { get; }
+        bool IsWarnEnabled { get; }
+        void Debug(string message);
+        void Debug(string message, System.Exception exception);
+        void DebugFormat(string format, params object[] args);
+        void Error(string message);
+        void Error(string message, System.Exception exception);
+        void ErrorFormat(string format, params object[] args);
+        void Fatal(string message);
+        void Fatal(string message, System.Exception exception);
+        void FatalFormat(string format, params object[] args);
+        void Info(string message);
+        void Info(string message, System.Exception exception);
+        void InfoFormat(string format, params object[] args);
+        void Warn(string message);
+        void Warn(string message, System.Exception exception);
+        void WarnFormat(string format, params object[] args);
+    }
+    public interface ILoggerFactory
+    {
+        NServiceBus.Logging.ILog GetLogger(string name);
+        NServiceBus.Logging.ILog GetLogger(System.Type type);
+    }
+    public enum LogLevel
+    {
+        Debug = 0,
+        Info = 1,
+        Warn = 2,
+        Error = 3,
+        Fatal = 4,
+    }
+    public static class LogManager
+    {
+        public static NServiceBus.Logging.ILog GetLogger(string name) { }
+        public static NServiceBus.Logging.ILog GetLogger(System.Type type) { }
+        public static NServiceBus.Logging.ILog GetLogger<T>() { }
+        public static T Use<T>()
+            where T : NServiceBus.Logging.LoggingFactoryDefinition, new () { }
+        public static void UseFactory(NServiceBus.Logging.ILoggerFactory loggerFactory) { }
+    }
+    public abstract class LoggingFactoryDefinition
+    {
+        protected LoggingFactoryDefinition() { }
+        protected abstract NServiceBus.Logging.ILoggerFactory GetLoggingFactory();
+    }
+}
+namespace NServiceBus.MessageInterfaces
+{
+    public interface IMessageMapper : NServiceBus.IMessageCreator
+    {
+        System.Type GetMappedTypeFor(string typeName);
+        System.Type GetMappedTypeFor(System.Type t);
+        void Initialize(System.Collections.Generic.IEnumerable<System.Type> types);
+    }
+}
+namespace NServiceBus.MessageInterfaces.MessageMapper.Reflection
+{
+    public class MessageMapper : NServiceBus.IMessageCreator, NServiceBus.MessageInterfaces.IMessageMapper
+    {
+        public MessageMapper() { }
+        public object CreateInstance(System.Type t) { }
+        public T CreateInstance<T>() { }
+        public T CreateInstance<T>(System.Action<T> action) { }
+        public System.Type GetMappedTypeFor(string typeName) { }
+        public System.Type GetMappedTypeFor(System.Type t) { }
+        public void Initialize(System.Collections.Generic.IEnumerable<System.Type> types) { }
+    }
+}
+namespace NServiceBus.MessageMutator
+{
+    public interface IMutateIncomingMessages
+    {
+        System.Threading.Tasks.Task MutateIncoming(NServiceBus.MessageMutator.MutateIncomingMessageContext context);
+    }
+    public interface IMutateIncomingTransportMessages
+    {
+        System.Threading.Tasks.Task MutateIncoming(NServiceBus.MessageMutator.MutateIncomingTransportMessageContext context);
+    }
+    public interface IMutateOutgoingMessages
+    {
+        System.Threading.Tasks.Task MutateOutgoing(NServiceBus.MessageMutator.MutateOutgoingMessageContext context);
+    }
+    public interface IMutateOutgoingTransportMessages
+    {
+        System.Threading.Tasks.Task MutateOutgoing(NServiceBus.MessageMutator.MutateOutgoingTransportMessageContext context);
+    }
+    public class MutateIncomingMessageContext : NServiceBus.ICancellableContext
+    {
+        public MutateIncomingMessageContext(object message, System.Collections.Generic.Dictionary<string, string> headers, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public object Message { get; set; }
+    }
+    public class MutateIncomingTransportMessageContext : NServiceBus.ICancellableContext
+    {
+        public MutateIncomingTransportMessageContext(byte[] body, System.Collections.Generic.Dictionary<string, string> headers, System.Threading.CancellationToken cancellationToken = default) { }
+        public byte[] Body { get; set; }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+    }
+    public class MutateOutgoingMessageContext : NServiceBus.ICancellableContext
+    {
+        public MutateOutgoingMessageContext(object outgoingMessage, System.Collections.Generic.Dictionary<string, string> outgoingHeaders, object incomingMessage, System.Collections.Generic.IReadOnlyDictionary<string, string> incomingHeaders, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public System.Collections.Generic.Dictionary<string, string> OutgoingHeaders { get; }
+        public object OutgoingMessage { get; set; }
+        public bool TryGetIncomingHeaders(out System.Collections.Generic.IReadOnlyDictionary<string, string> incomingHeaders) { }
+        public bool TryGetIncomingMessage(out object incomingMessage) { }
+    }
+    public class MutateOutgoingTransportMessageContext : NServiceBus.ICancellableContext
+    {
+        public MutateOutgoingTransportMessageContext(byte[] outgoingBody, object outgoingMessage, System.Collections.Generic.Dictionary<string, string> outgoingHeaders, object incomingMessage, System.Collections.Generic.IReadOnlyDictionary<string, string> incomingHeaders, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public byte[] OutgoingBody { get; set; }
+        public System.Collections.Generic.Dictionary<string, string> OutgoingHeaders { get; }
+        public object OutgoingMessage { get; }
+        public bool TryGetIncomingHeaders(out System.Collections.Generic.IReadOnlyDictionary<string, string> incomingHeaders) { }
+        public bool TryGetIncomingMessage(out object incomingMessage) { }
+    }
+    public static class MutatorRegistrationExtensions
+    {
+        public static void RegisterMessageMutator(this NServiceBus.EndpointConfiguration endpointConfiguration, object messageMutator) { }
+    }
+}
+namespace NServiceBus.ObjectBuilder.Common
+{
+    [System.Obsolete("The NServiceBus dependency injection container API has been deprecated. Use the e" +
+        "xternally managed container mode to use custom containers. Will be removed in ve" +
+        "rsion 9.0.0.", true)]
+    public interface IContainer : System.IDisposable { }
+}
+namespace NServiceBus.ObjectBuilder
+{
+    [System.Obsolete("Use `IServiceProvider` instead. Will be removed in version 9.0.0.", true)]
+    public interface IBuilder : System.IDisposable
+    {
+        [System.Obsolete("The Build method is not supported anymore. Use `GetService` instead. Will be remo" +
+            "ved in version 9.0.0.", true)]
+        object Build(System.Type typeToBuild);
+        [System.Obsolete("The Build<T> method is not supported anymore. Use `GetService` instead. Will be r" +
+            "emoved in version 9.0.0.", true)]
+        T Build<T>();
+        [System.Obsolete("The BuildAll method is not supported anymore. Use `GetServices` instead. Will be " +
+            "removed in version 9.0.0.", true)]
+        System.Collections.Generic.IEnumerable<object> BuildAll(System.Type typeToBuild);
+        [System.Obsolete("The BuildAll<T> method is not supported anymore. Use `GetServices` instead. Will " +
+            "be removed in version 9.0.0.", true)]
+        System.Collections.Generic.IEnumerable<T> BuildAll<T>();
+        [System.Obsolete("The BuildAndDispatch method is not supported anymore. Will be removed in version " +
+            "9.0.0.", true)]
+        void BuildAndDispatch(System.Type typeToBuild, System.Action<object> action);
+        [System.Obsolete("The CreateChildBuilder method is not supported anymore. Use `CreateScope` instead" +
+            ". Will be removed in version 9.0.0.", true)]
+        NServiceBus.ObjectBuilder.IBuilder CreateChildBuilder();
+        [System.Obsolete("The Release method is not supported anymore. Will be removed in version 9.0.0.", true)]
+        void Release(object instance);
+    }
+    [System.Obsolete("Use `IServiceCollection` instead. Will be removed in version 9.0.0.", true)]
+    public interface IConfigureComponents
+    {
+        [System.Obsolete("Use `IServiceCollection.ConfigureComponent` instead. Will be removed in version 9" +
+            ".0.0.", true)]
+        void ConfigureComponent(System.Type concreteComponent, NServiceBus.DependencyLifecycle dependencyLifecycle);
+        [System.Obsolete("Use `IServiceCollection.ConfigureComponent` instead. Will be removed in version 9" +
+            ".0.0.", true)]
+        void ConfigureComponent<T>(NServiceBus.DependencyLifecycle dependencyLifecycle);
+        [System.Obsolete("Use `IServiceCollection.ConfigureComponent` instead. Will be removed in version 9" +
+            ".0.0.", true)]
+        void ConfigureComponent<T>(System.Func<T> componentFactory, NServiceBus.DependencyLifecycle dependencyLifecycle);
+        [System.Obsolete("Use `IServiceCollection.ConfigureComponent` instead. Will be removed in version 9" +
+            ".0.0.", true)]
+        void ConfigureComponent<T>(System.Func<System.IServiceProvider, T> componentFactory, NServiceBus.DependencyLifecycle dependencyLifecycle);
+        [System.Obsolete("Use `IServiceCollection.HasComponent` instead. Will be removed in version 9.0.0.", true)]
+        bool HasComponent(System.Type componentType);
+        [System.Obsolete("Use `IServiceCollection.HasComponent` instead. Will be removed in version 9.0.0.", true)]
+        bool HasComponent<T>();
+        [System.Obsolete("Use `IServiceCollection.AddSingleton` instead. Will be removed in version 9.0.0.", true)]
+        void RegisterSingleton(System.Type lookupType, object instance);
+        [System.Obsolete("Use `IServiceCollection.AddSingleton` instead. Will be removed in version 9.0.0.", true)]
+        void RegisterSingleton<T>(T instance);
+    }
+}
+namespace NServiceBus.Outbox
+{
+    public interface IOutboxStorage
+    {
+        System.Threading.Tasks.Task<NServiceBus.Outbox.OutboxTransaction> BeginTransaction(NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<NServiceBus.Outbox.OutboxMessage> Get(string messageId, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SetAsDispatched(string messageId, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Store(NServiceBus.Outbox.OutboxMessage message, NServiceBus.Outbox.OutboxTransaction transaction, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public class OutboxMessage
+    {
+        public OutboxMessage(string messageId, NServiceBus.Outbox.TransportOperation[] operations) { }
+        public string MessageId { get; }
+        public NServiceBus.Outbox.TransportOperation[] TransportOperations { get; }
+    }
+    public class OutboxSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings { }
+    public interface OutboxTransaction : System.IDisposable
+    {
+        System.Threading.Tasks.Task Commit(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public class TransportOperation
+    {
+        public TransportOperation(string messageId, NServiceBus.Transport.DispatchProperties properties, byte[] body, System.Collections.Generic.Dictionary<string, string> headers) { }
+        public byte[] Body { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string MessageId { get; }
+        public NServiceBus.Transport.DispatchProperties Options { get; }
+    }
+}
+namespace NServiceBus.Performance.TimeToBeReceived
+{
+    public class DiscardIfNotReceivedBefore
+    {
+        public DiscardIfNotReceivedBefore(System.TimeSpan maxTime) { }
+        public System.TimeSpan MaxTime { get; }
+    }
+}
+namespace NServiceBus.Persistence
+{
+    public interface CompletableSynchronizedStorageSession : NServiceBus.Persistence.SynchronizedStorageSession, System.IDisposable
+    {
+        System.Threading.Tasks.Task CompleteAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISynchronizedStorage
+    {
+        System.Threading.Tasks.Task<NServiceBus.Persistence.CompletableSynchronizedStorageSession> OpenSession(NServiceBus.Extensibility.ContextBag contextBag, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISynchronizedStorageAdapter
+    {
+        System.Threading.Tasks.Task<NServiceBus.Persistence.CompletableSynchronizedStorageSession> TryAdapt(NServiceBus.Outbox.OutboxTransaction transaction, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<NServiceBus.Persistence.CompletableSynchronizedStorageSession> TryAdapt(NServiceBus.Transport.TransportTransaction transportTransaction, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public abstract class PersistenceDefinition
+    {
+        protected PersistenceDefinition() { }
+        protected void Defaults(System.Action<NServiceBus.Settings.SettingsHolder> action) { }
+        public bool HasSupportFor(System.Type storageType) { }
+        public bool HasSupportFor<T>()
+            where T : NServiceBus.StorageType { }
+        protected void Supports<T>(System.Action<NServiceBus.Settings.SettingsHolder> action)
+            where T : NServiceBus.StorageType { }
+    }
+    public interface SynchronizedStorageSession { }
+}
+namespace NServiceBus.Pipeline
+{
+    public abstract class Behavior<TContext> : NServiceBus.Pipeline.IBehavior, NServiceBus.Pipeline.IBehavior<TContext, TContext>
+        where TContext : NServiceBus.Pipeline.IBehaviorContext
+    {
+        protected Behavior() { }
+        public abstract System.Threading.Tasks.Task Invoke(TContext context, System.Func<System.Threading.Tasks.Task> next);
+        public System.Threading.Tasks.Task Invoke(TContext context, System.Func<TContext, System.Threading.Tasks.Task> next) { }
+    }
+    public abstract class ForkConnector<TFromContext, TForkContext> : NServiceBus.Pipeline.Behavior<TFromContext>, NServiceBus.Pipeline.IBehavior, NServiceBus.Pipeline.IBehavior<TFromContext, TFromContext>
+        where TFromContext : NServiceBus.Pipeline.IBehaviorContext
+        where TForkContext : NServiceBus.Pipeline.IBehaviorContext
+    {
+        protected ForkConnector() { }
+        public override sealed System.Threading.Tasks.Task Invoke(TFromContext context, System.Func<System.Threading.Tasks.Task> next) { }
+        public abstract System.Threading.Tasks.Task Invoke(TFromContext context, System.Func<System.Threading.Tasks.Task> next, System.Func<TForkContext, System.Threading.Tasks.Task> fork);
+    }
+    public interface IAuditContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        string AuditAddress { get; }
+        NServiceBus.Transport.OutgoingMessage Message { get; }
+        void AddAuditData(string key, string value);
+    }
+    public interface IBatchDispatchContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        System.Collections.Generic.IReadOnlyCollection<NServiceBus.Transport.TransportOperation> Operations { get; }
+    }
+    public interface IBehavior { }
+    public interface IBehaviorContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext
+    {
+        System.IServiceProvider Builder { get; }
+    }
+    public interface IBehavior<in TInContext, out TOutContext> : NServiceBus.Pipeline.IBehavior
+        where in TInContext : NServiceBus.Pipeline.IBehaviorContext
+        where out TOutContext : NServiceBus.Pipeline.IBehaviorContext
+    {
+        System.Threading.Tasks.Task Invoke(TInContext context, System.Func<TOutContext, System.Threading.Tasks.Task> next);
+    }
+    public interface IDispatchContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        System.Collections.Generic.IEnumerable<NServiceBus.Transport.TransportOperation> Operations { get; }
+    }
+    [System.Obsolete("Message forwarding is no longer supported, but can be implemented as a custom pip" +
+        "eline behavior. Will be removed in version 9.0.0.", true)]
+    public interface IForwardingContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext { }
+    public interface IIncomingContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IMessageProcessingContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext { }
+    public interface IIncomingLogicalMessageContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IMessageProcessingContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IIncomingContext
+    {
+        System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        NServiceBus.Pipeline.LogicalMessage Message { get; }
+        bool MessageHandled { get; set; }
+        void UpdateMessageInstance(object newInstance);
+    }
+    public interface IIncomingPhysicalMessageContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IMessageProcessingContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IIncomingContext
+    {
+        NServiceBus.Transport.IncomingMessage Message { get; }
+        void UpdateMessage(byte[] body);
+    }
+    public interface IInvokeHandlerContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IMessageHandlerContext, NServiceBus.IMessageProcessingContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IIncomingContext
+    {
+        bool HandlerInvocationAborted { get; }
+        System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        object MessageBeingHandled { get; }
+        NServiceBus.Pipeline.MessageHandler MessageHandler { get; }
+        NServiceBus.Unicast.Messages.MessageMetadata MessageMetadata { get; }
+    }
+    public interface IOutgoingContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        string MessageId { get; }
+    }
+    public interface IOutgoingLogicalMessageContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IOutgoingContext
+    {
+        NServiceBus.Pipeline.OutgoingLogicalMessage Message { get; }
+        System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> RoutingStrategies { get; }
+        void UpdateMessage(object newInstance);
+    }
+    public interface IOutgoingPhysicalMessageContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IOutgoingContext
+    {
+        byte[] Body { get; }
+        System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> RoutingStrategies { get; }
+        void UpdateMessage(byte[] body);
+    }
+    public interface IOutgoingPublishContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IOutgoingContext
+    {
+        NServiceBus.Pipeline.OutgoingLogicalMessage Message { get; }
+    }
+    public interface IOutgoingReplyContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IOutgoingContext
+    {
+        NServiceBus.Pipeline.OutgoingLogicalMessage Message { get; }
+    }
+    public interface IOutgoingSendContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.IPipelineContext, NServiceBus.Pipeline.IBehaviorContext, NServiceBus.Pipeline.IOutgoingContext
+    {
+        NServiceBus.Pipeline.OutgoingLogicalMessage Message { get; }
+    }
+    public interface IRoutingContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        NServiceBus.Transport.OutgoingMessage Message { get; }
+        System.Collections.Generic.IReadOnlyCollection<NServiceBus.Routing.RoutingStrategy> RoutingStrategies { get; set; }
+    }
+    public interface ISubscribeContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        [System.Obsolete("Use `EventTypes` instead. Will be removed in version 9.0.0.", true)]
+        System.Type EventType { get; }
+        System.Type[] EventTypes { get; }
+    }
+    public interface ITransportReceiveContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        NServiceBus.Transport.IncomingMessage Message { get; }
+        [System.Obsolete("The AbortReceiveOperation method is no longer supported. See the upgrade guide fo" +
+            "r more details. Will be removed in version 9.0.0.", true)]
+        void AbortReceiveOperation();
+    }
+    public interface IUnsubscribeContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext
+    {
+        System.Type EventType { get; }
+    }
+    public class LogicalMessage
+    {
+        public LogicalMessage(NServiceBus.Unicast.Messages.MessageMetadata metadata, object message) { }
+        public object Instance { get; }
+        public System.Type MessageType { get; }
+        public NServiceBus.Unicast.Messages.MessageMetadata Metadata { get; }
+    }
+    public class LogicalMessageFactory
+    {
+        public LogicalMessageFactory(NServiceBus.Unicast.Messages.MessageMetadataRegistry messageMetadataRegistry, NServiceBus.MessageInterfaces.IMessageMapper messageMapper) { }
+        public NServiceBus.Pipeline.LogicalMessage Create(object message) { }
+        public NServiceBus.Pipeline.LogicalMessage Create(System.Type messageType, object message) { }
+    }
+    public class MessageHandler
+    {
+        public MessageHandler(System.Func<object, object, NServiceBus.IMessageHandlerContext, System.Threading.Tasks.Task> invocation, System.Type handlerType) { }
+        public System.Type HandlerType { get; }
+        public object Instance { get; set; }
+        public System.Threading.Tasks.Task Invoke(object message, NServiceBus.IMessageHandlerContext handlerContext) { }
+    }
+    public class OutgoingLogicalMessage
+    {
+        public OutgoingLogicalMessage(System.Type messageType, object message) { }
+        public object Instance { get; }
+        public System.Type MessageType { get; }
+    }
+    public class PipelineSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public void Register(NServiceBus.Pipeline.RegisterStep registration) { }
+        public void Register(System.Type behavior, string description) { }
+        public void Register(string stepId, System.Type behavior, string description) { }
+        public void Register<TRegisterStep>()
+            where TRegisterStep : NServiceBus.Pipeline.RegisterStep, new () { }
+        public void Register<T>(System.Func<System.IServiceProvider, T> factoryMethod, string description)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        public void Register<T>(T behavior, string description)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        public void Register<T>(string stepId, System.Func<System.IServiceProvider, T> factoryMethod, string description)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        public void Register<T>(string stepId, T behavior, string description)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        public void RegisterOrReplace(string stepId, System.Type behavior, string description = null) { }
+        public void RegisterOrReplace<T>(string stepId, System.Func<System.IServiceProvider, T> factoryMethod, string description = null)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        public void RegisterOrReplace<T>(string stepId, T behavior, string description = null)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        [System.Obsolete(@"Removing behaviors from the pipeline is discouraged, to disable a behavior replace the behavior by an empty one. Documentation: https://docs.particular.net/nservicebus/pipeline/manipulate-with-behaviors. The member currently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public void Remove(string stepId) { }
+        public void Replace(string stepId, System.Type newBehavior, string description = null) { }
+        public void Replace<T>(string stepId, System.Func<System.IServiceProvider, T> factoryMethod, string description = null)
+            where T : NServiceBus.Pipeline.IBehavior { }
+        public void Replace<T>(string stepId, T newBehavior, string description = null)
+            where T : NServiceBus.Pipeline.IBehavior { }
+    }
+    public abstract class PipelineTerminator<T> : NServiceBus.Pipeline.StageConnector<T, NServiceBus.Pipeline.PipelineTerminator<T>.ITerminatingContext>
+        where T : NServiceBus.Pipeline.IBehaviorContext
+    {
+        protected PipelineTerminator() { }
+        public override sealed System.Threading.Tasks.Task Invoke(T context, System.Func<NServiceBus.Pipeline.PipelineTerminator<T>.ITerminatingContext, System.Threading.Tasks.Task> next) { }
+        protected abstract System.Threading.Tasks.Task Terminate(T context);
+        public interface ITerminatingContext : NServiceBus.Extensibility.IExtendable, NServiceBus.ICancellableContext, NServiceBus.Pipeline.IBehaviorContext { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{StepId}({BehaviorType.FullName}) - {Description}")]
+    public abstract class RegisterStep
+    {
+        protected RegisterStep(string stepId, System.Type behavior, string description, System.Func<System.IServiceProvider, NServiceBus.Pipeline.IBehavior> factoryMethod = null) { }
+        public System.Type BehaviorType { get; }
+        public string Description { get; }
+        public string StepId { get; }
+        public void InsertAfter(string id) { }
+        public void InsertAfterIfExists(string id) { }
+        public void InsertBefore(string id) { }
+        public void InsertBeforeIfExists(string id) { }
+    }
+    public abstract class StageConnector<TFromContext, TToContext> : NServiceBus.Pipeline.IBehavior, NServiceBus.Pipeline.IBehavior<TFromContext, TToContext>
+        where TFromContext : NServiceBus.Pipeline.IBehaviorContext
+        where TToContext : NServiceBus.Pipeline.IBehaviorContext
+    {
+        protected StageConnector() { }
+        public abstract System.Threading.Tasks.Task Invoke(TFromContext context, System.Func<TToContext, System.Threading.Tasks.Task> stage);
+    }
+    public abstract class StageForkConnector<TFromContext, TToContext, TForkContext> : NServiceBus.Pipeline.IBehavior, NServiceBus.Pipeline.IBehavior<TFromContext, TToContext>
+        where TFromContext : NServiceBus.Pipeline.IBehaviorContext
+        where TToContext : NServiceBus.Pipeline.IBehaviorContext
+        where TForkContext : NServiceBus.Pipeline.IBehaviorContext
+    {
+        protected StageForkConnector() { }
+        public System.Threading.Tasks.Task Invoke(TFromContext context, System.Func<TToContext, System.Threading.Tasks.Task> next) { }
+        public abstract System.Threading.Tasks.Task Invoke(TFromContext context, System.Func<TToContext, System.Threading.Tasks.Task> stage, System.Func<TForkContext, System.Threading.Tasks.Task> fork);
+    }
+    public static class TransportMessageContextExtensions
+    {
+        public static bool TryGetIncomingPhysicalMessage(this NServiceBus.Pipeline.IOutgoingLogicalMessageContext context, out NServiceBus.Transport.IncomingMessage message) { }
+        public static bool TryGetIncomingPhysicalMessage(this NServiceBus.Pipeline.IOutgoingPhysicalMessageContext context, out NServiceBus.Transport.IncomingMessage message) { }
+        public static bool TryGetIncomingPhysicalMessage(this NServiceBus.Pipeline.IOutgoingReplyContext context, out NServiceBus.Transport.IncomingMessage message) { }
+    }
+}
+namespace NServiceBus.Routing
+{
+    public abstract class AddressTag
+    {
+        protected AddressTag() { }
+    }
+    public class DistributionContext : NServiceBus.Extensibility.IExtendable
+    {
+        public DistributionContext(string[] receiverAddresses, NServiceBus.Pipeline.OutgoingLogicalMessage message, string messageId, System.Collections.Generic.Dictionary<string, string> headers, System.Func<NServiceBus.Routing.EndpointInstance, string> addressTranslation, NServiceBus.Extensibility.ContextBag extensions) { }
+        public NServiceBus.Extensibility.ContextBag Extensions { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public NServiceBus.Pipeline.OutgoingLogicalMessage Message { get; }
+        public string MessageId { get; }
+        public string[] ReceiverAddresses { get; }
+        public string ToTransportAddress(NServiceBus.Routing.EndpointInstance endpointInstance) { }
+    }
+    public abstract class DistributionStrategy
+    {
+        protected DistributionStrategy(string endpoint, NServiceBus.DistributionStrategyScope scope) { }
+        public string Endpoint { get; }
+        public NServiceBus.DistributionStrategyScope Scope { get; }
+        public abstract string SelectDestination(NServiceBus.Routing.DistributionContext context);
+    }
+    public sealed class EndpointInstance
+    {
+        public EndpointInstance(string endpoint, string discriminator = null, System.Collections.Generic.IReadOnlyDictionary<string, string> properties = null) { }
+        public string Discriminator { get; }
+        public string Endpoint { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> Properties { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public NServiceBus.Routing.EndpointInstance SetProperty(string key, string value) { }
+        public override string ToString() { }
+        public static bool operator !=(NServiceBus.Routing.EndpointInstance left, NServiceBus.Routing.EndpointInstance right) { }
+        public static bool operator ==(NServiceBus.Routing.EndpointInstance left, NServiceBus.Routing.EndpointInstance right) { }
+    }
+    public class EndpointInstances
+    {
+        public EndpointInstances() { }
+        public void AddOrReplaceInstances(string sourceKey, System.Collections.Generic.IList<NServiceBus.Routing.EndpointInstance> endpointInstances) { }
+        public System.Collections.Generic.IEnumerable<NServiceBus.Routing.EndpointInstance> FindInstances(string endpoint) { }
+    }
+    public interface IMessageDrivenSubscriptionTransport { }
+    public class MulticastAddressTag : NServiceBus.Routing.AddressTag
+    {
+        public MulticastAddressTag(System.Type messageType) { }
+        public System.Type MessageType { get; }
+    }
+    public class MulticastRoutingStrategy : NServiceBus.Routing.RoutingStrategy
+    {
+        public MulticastRoutingStrategy(System.Type messageType) { }
+        public override NServiceBus.Routing.AddressTag Apply(System.Collections.Generic.Dictionary<string, string> headers) { }
+    }
+    public class RouteTableEntry
+    {
+        public RouteTableEntry(System.Type messageType, NServiceBus.Routing.UnicastRoute route) { }
+        public System.Type MessageType { get; }
+        public NServiceBus.Routing.UnicastRoute Route { get; }
+    }
+    public abstract class RoutingStrategy
+    {
+        protected RoutingStrategy() { }
+        public abstract NServiceBus.Routing.AddressTag Apply(System.Collections.Generic.Dictionary<string, string> headers);
+    }
+    public class SingleInstanceRoundRobinDistributionStrategy : NServiceBus.Routing.DistributionStrategy
+    {
+        public SingleInstanceRoundRobinDistributionStrategy(string endpoint, NServiceBus.DistributionStrategyScope scope) { }
+        public override string SelectDestination(NServiceBus.Routing.DistributionContext context) { }
+    }
+    public class UnicastAddressTag : NServiceBus.Routing.AddressTag
+    {
+        public UnicastAddressTag(string destination) { }
+        public string Destination { get; }
+    }
+    public class UnicastRoute
+    {
+        public string Endpoint { get; }
+        public NServiceBus.Routing.EndpointInstance Instance { get; }
+        public string PhysicalAddress { get; }
+        public override string ToString() { }
+        public static NServiceBus.Routing.UnicastRoute CreateFromEndpointInstance(NServiceBus.Routing.EndpointInstance instance) { }
+        public static NServiceBus.Routing.UnicastRoute CreateFromEndpointName(string endpoint) { }
+        public static NServiceBus.Routing.UnicastRoute CreateFromPhysicalAddress(string physicalAddress) { }
+    }
+    public class UnicastRoutingStrategy : NServiceBus.Routing.RoutingStrategy
+    {
+        public UnicastRoutingStrategy(string destination) { }
+        public override NServiceBus.Routing.AddressTag Apply(System.Collections.Generic.Dictionary<string, string> headers) { }
+    }
+    public class UnicastRoutingTable
+    {
+        public UnicastRoutingTable() { }
+        public void AddOrReplaceRoutes(string sourceKey, System.Collections.Generic.IList<NServiceBus.Routing.RouteTableEntry> entries) { }
+    }
+}
+namespace NServiceBus.Routing.MessageDrivenSubscriptions
+{
+    public class PublisherAddress
+    {
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static NServiceBus.Routing.MessageDrivenSubscriptions.PublisherAddress CreateFromEndpointInstances(params NServiceBus.Routing.EndpointInstance[] instances) { }
+        public static NServiceBus.Routing.MessageDrivenSubscriptions.PublisherAddress CreateFromEndpointName(string endpoint) { }
+        public static NServiceBus.Routing.MessageDrivenSubscriptions.PublisherAddress CreateFromPhysicalAddresses(params string[] addresses) { }
+    }
+    public class PublisherTableEntry
+    {
+        public PublisherTableEntry(System.Type eventType, NServiceBus.Routing.MessageDrivenSubscriptions.PublisherAddress address) { }
+        public NServiceBus.Routing.MessageDrivenSubscriptions.PublisherAddress Address { get; }
+        public System.Type EventType { get; }
+    }
+    public class Publishers
+    {
+        public Publishers() { }
+        public void AddOrReplacePublishers(string sourceKey, System.Collections.Generic.IList<NServiceBus.Routing.MessageDrivenSubscriptions.PublisherTableEntry> entries) { }
+    }
+}
+namespace NServiceBus.Sagas
+{
+    public class ActiveSagaInstance
+    {
+        public ActiveSagaInstance(NServiceBus.Saga saga, NServiceBus.Sagas.SagaMetadata metadata, System.Func<System.DateTimeOffset> currentDateTimeOffsetProvider) { }
+        public System.DateTimeOffset Created { get; }
+        public NServiceBus.Saga Instance { get; }
+        public bool IsNew { get; }
+        public System.DateTimeOffset Modified { get; }
+        public bool NotFound { get; }
+        public string SagaId { get; }
+        public void AttachNewEntity(NServiceBus.IContainSagaData sagaEntity) { }
+    }
+    public abstract class IFindSagas<T>
+        where T : NServiceBus.IContainSagaData
+    {
+        protected IFindSagas() { }
+        public interface Using<M> : NServiceBus.Sagas.IFinder
+        {
+            System.Threading.Tasks.Task<T> FindBy(M message, NServiceBus.Persistence.SynchronizedStorageSession storageSession, NServiceBus.Extensibility.ReadOnlyContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        }
+    }
+    public interface IFinder { }
+    public interface IHandleSagaNotFound
+    {
+        System.Threading.Tasks.Task Handle(object message, NServiceBus.IMessageProcessingContext context);
+    }
+    public interface ISagaIdGenerator
+    {
+        System.Guid Generate(NServiceBus.Sagas.SagaIdGeneratorContext context);
+    }
+    public interface ISagaPersister
+    {
+        System.Threading.Tasks.Task Complete(NServiceBus.IContainSagaData sagaData, NServiceBus.Persistence.SynchronizedStorageSession session, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<TSagaData> Get<TSagaData>(System.Guid sagaId, NServiceBus.Persistence.SynchronizedStorageSession session, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default)
+            where TSagaData :  class, NServiceBus.IContainSagaData;
+        System.Threading.Tasks.Task<TSagaData> Get<TSagaData>(string propertyName, object propertyValue, NServiceBus.Persistence.SynchronizedStorageSession session, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default)
+            where TSagaData :  class, NServiceBus.IContainSagaData;
+        System.Threading.Tasks.Task Save(NServiceBus.IContainSagaData sagaData, NServiceBus.Sagas.SagaCorrelationProperty correlationProperty, NServiceBus.Persistence.SynchronizedStorageSession session, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Update(NServiceBus.IContainSagaData sagaData, NServiceBus.Persistence.SynchronizedStorageSession session, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public class SagaCorrelationProperty
+    {
+        public SagaCorrelationProperty(string name, object value) { }
+        public string Name { get; }
+        public object Value { get; }
+        public static NServiceBus.Sagas.SagaCorrelationProperty None { get; }
+    }
+    public class SagaFinderDefinition
+    {
+        public System.Type MessageType { get; }
+        public string MessageTypeName { get; }
+        public System.Collections.Generic.Dictionary<string, object> Properties { get; }
+        public System.Type Type { get; }
+    }
+    public class SagaIdGeneratorContext : NServiceBus.Extensibility.IExtendable
+    {
+        public SagaIdGeneratorContext(NServiceBus.Sagas.SagaCorrelationProperty correlationProperty, NServiceBus.Sagas.SagaMetadata sagaMetadata, NServiceBus.Extensibility.ContextBag extensions) { }
+        public NServiceBus.Sagas.SagaCorrelationProperty CorrelationProperty { get; }
+        public NServiceBus.Extensibility.ContextBag Extensions { get; }
+        public NServiceBus.Sagas.SagaMetadata SagaMetadata { get; }
+    }
+    public class SagaMessage
+    {
+        public bool IsAllowedToStartSaga { get; }
+        public System.Type MessageType { get; }
+        public string MessageTypeName { get; }
+    }
+    public class SagaMetadata
+    {
+        public SagaMetadata(string name, System.Type sagaType, string entityName, System.Type sagaEntityType, NServiceBus.Sagas.SagaMetadata.CorrelationPropertyMetadata correlationProperty, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Sagas.SagaMessage> messages, System.Collections.Generic.IReadOnlyCollection<NServiceBus.Sagas.SagaFinderDefinition> finders) { }
+        public System.Collections.Generic.IReadOnlyCollection<NServiceBus.Sagas.SagaMessage> AssociatedMessages { get; }
+        public string EntityName { get; }
+        public System.Collections.Generic.IReadOnlyCollection<NServiceBus.Sagas.SagaFinderDefinition> Finders { get; }
+        public string Name { get; }
+        public System.Type SagaEntityType { get; }
+        public System.Type SagaType { get; }
+        public bool IsMessageAllowedToStartTheSaga(string messageType) { }
+        public bool TryGetCorrelationProperty(out NServiceBus.Sagas.SagaMetadata.CorrelationPropertyMetadata property) { }
+        public bool TryGetFinder(string messageType, out NServiceBus.Sagas.SagaFinderDefinition finderDefinition) { }
+        public static NServiceBus.Sagas.SagaMetadata Create(System.Type sagaType) { }
+        public static NServiceBus.Sagas.SagaMetadata Create(System.Type sagaType, System.Collections.Generic.IEnumerable<System.Type> availableTypes, NServiceBus.Conventions conventions) { }
+        public class CorrelationPropertyMetadata
+        {
+            public CorrelationPropertyMetadata(string name, System.Type type) { }
+            public string Name { get; }
+            public System.Type Type { get; }
+        }
+    }
+    public class SagaMetadataCollection : System.Collections.Generic.IEnumerable<NServiceBus.Sagas.SagaMetadata>, System.Collections.IEnumerable
+    {
+        public SagaMetadataCollection() { }
+        public NServiceBus.Sagas.SagaMetadata Find(System.Type sagaType) { }
+        public NServiceBus.Sagas.SagaMetadata FindByEntity(System.Type entityType) { }
+        public System.Collections.Generic.IEnumerator<NServiceBus.Sagas.SagaMetadata> GetEnumerator() { }
+        public void Initialize(System.Collections.Generic.IEnumerable<System.Type> availableTypes) { }
+        public void Initialize(System.Collections.Generic.IEnumerable<System.Type> availableTypes, NServiceBus.Conventions conventions) { }
+    }
+    public class SagaSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+    {
+        public void DisableBestPracticeValidation() { }
+    }
+}
+namespace NServiceBus.Serialization
+{
+    public interface IMessageSerializer
+    {
+        string ContentType { get; }
+        object[] Deserialize(System.IO.Stream stream, System.Collections.Generic.IList<System.Type> messageTypes = null);
+        void Serialize(object message, System.IO.Stream stream);
+    }
+    public abstract class SerializationDefinition
+    {
+        protected SerializationDefinition() { }
+        public abstract System.Func<NServiceBus.MessageInterfaces.IMessageMapper, NServiceBus.Serialization.IMessageSerializer> Configure(NServiceBus.Settings.ReadOnlySettings settings);
+    }
+    public class SerializationExtensions<T> : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
+        where T : NServiceBus.Serialization.SerializationDefinition
+    {
+        public SerializationExtensions(NServiceBus.Settings.SettingsHolder settings) { }
+    }
+}
+namespace NServiceBus.Settings
+{
+    public interface ReadOnlySettings
+    {
+        object Get(string key);
+        T Get<T>();
+        T Get<T>(string key);
+        T GetOrDefault<T>();
+        T GetOrDefault<T>(string key);
+        bool HasExplicitValue(string key);
+        bool HasExplicitValue<T>();
+        bool HasSetting(string key);
+        bool HasSetting<T>();
+        bool TryGet<T>(out T val);
+        bool TryGet<T>(string key, out T val);
+    }
+    public class SettingsHolder : NServiceBus.Settings.ReadOnlySettings
+    {
+        public SettingsHolder() { }
+        public void Clear() { }
+        public object Get(string key) { }
+        public T Get<T>() { }
+        public T Get<T>(string key) { }
+        public T GetOrCreate<T>()
+            where T :  class, new () { }
+        public T GetOrDefault<T>() { }
+        public T GetOrDefault<T>(string key) { }
+        public bool HasExplicitValue(string key) { }
+        public bool HasExplicitValue<T>() { }
+        public bool HasSetting(string key) { }
+        public bool HasSetting<T>() { }
+        public void Set(string key, object value) { }
+        public void Set<T>(System.Action value) { }
+        [System.Obsolete("Use `Set<T>(T value)` instead. The member currently throws a NotImplementedExcept" +
+            "ion. Will be removed in version 9.0.0.", true)]
+        public void Set<T>(object value) { }
+        public void Set<T>(T value) { }
+        public void SetDefault(string key, object value) { }
+        public void SetDefault<T>(System.Action value) { }
+        [System.Obsolete("Use `SetDefault<T>(T value)` instead. The member currently throws a NotImplemente" +
+            "dException. Will be removed in version 9.0.0.", true)]
+        public void SetDefault<T>(object value) { }
+        public void SetDefault<T>(T value) { }
+        public bool TryGet<T>(out T val) { }
+        public bool TryGet<T>(string key, out T val) { }
+    }
+}
+namespace NServiceBus.Support
+{
+    public static class RuntimeEnvironment
+    {
+        public static string MachineName { get; }
+        public static System.Func<string> MachineNameAction { get; set; }
+    }
+}
+namespace NServiceBus.Timeout.Core
+{
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public interface IPersistTimeouts
+    {
+        System.Threading.Tasks.Task Add(NServiceBus.Timeout.Core.TimeoutData timeout, NServiceBus.Extensibility.ContextBag context);
+        System.Threading.Tasks.Task<NServiceBus.Timeout.Core.TimeoutData> Peek(string timeoutId, NServiceBus.Extensibility.ContextBag context);
+        System.Threading.Tasks.Task RemoveTimeoutBy(System.Guid sagaId, NServiceBus.Extensibility.ContextBag context);
+        System.Threading.Tasks.Task<bool> TryRemove(string timeoutId, NServiceBus.Extensibility.ContextBag context);
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public interface IQueryTimeouts
+    {
+        System.Threading.Tasks.Task<NServiceBus.Timeout.Core.TimeoutsChunk> GetNextChunk(System.DateTime startSlice);
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public class TimeoutData
+    {
+        public TimeoutData() { }
+        public string Destination { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string Id { get; }
+        public string OwningTimeoutManager { get; }
+        public System.Guid SagaId { get; }
+        public byte[] State { get; }
+        public System.DateTime Time { get; }
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public class TimeoutsChunk
+    {
+        public TimeoutsChunk(NServiceBus.Timeout.Core.TimeoutsChunk.Timeout[] dueTimeouts, System.DateTime nextTimeToQuery) { }
+        public NServiceBus.Timeout.Core.TimeoutsChunk.Timeout[] DueTimeouts { get; }
+        public System.DateTime NextTimeToQuery { get; }
+        [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+            "provided by transports. See the upgrade guide for more details. Will be removed " +
+            "in version 9.0.0.", true)]
+        public struct Timeout
+        {
+            public Timeout(string id, System.DateTime dueTime) { }
+            public System.DateTime DueTime { get; }
+            public string Id { get; }
+        }
+    }
+}
+namespace NServiceBus.Transport
+{
+    public enum DispatchConsistency
+    {
+        Default = 1,
+        Isolated = 2,
+    }
+    public class DispatchProperties : System.Collections.Generic.Dictionary<string, string>
+    {
+        public DispatchProperties() { }
+        public DispatchProperties(System.Collections.Generic.Dictionary<string, string> properties) { }
+        public NServiceBus.DelayedDelivery.DelayDeliveryWith DelayDeliveryWith { get; set; }
+        public NServiceBus.Performance.TimeToBeReceived.DiscardIfNotReceivedBefore DiscardIfNotReceivedBefore { get; set; }
+        public NServiceBus.DelayedDelivery.DoNotDeliverBefore DoNotDeliverBefore { get; set; }
+    }
+    public class ErrorContext
+    {
+        public ErrorContext(System.Exception exception, System.Collections.Generic.Dictionary<string, string> headers, string nativeMessageId, byte[] body, NServiceBus.Transport.TransportTransaction transportTransaction, int immediateProcessingFailures, NServiceBus.Extensibility.ReadOnlyContextBag context) { }
+        public int DelayedDeliveriesPerformed { get; }
+        public System.Exception Exception { get; }
+        public NServiceBus.Extensibility.ReadOnlyContextBag Extensions { get; }
+        public int ImmediateProcessingFailures { get; }
+        public NServiceBus.Transport.IncomingMessage Message { get; }
+        public NServiceBus.Transport.TransportTransaction TransportTransaction { get; }
+    }
+    public enum ErrorHandleResult
+    {
+        Handled = 0,
+        RetryRequired = 1,
+    }
+    public class HostSettings
+    {
+        [System.Obsolete("Use the overload that accepts a delegate with a cancellation token. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public HostSettings(string name, string hostDisplayName, NServiceBus.StartupDiagnosticEntries startupDiagnostic, System.Action<string, System.Exception> criticalErrorAction, bool setupInfrastructure, NServiceBus.Settings.ReadOnlySettings coreSettings = null) { }
+        public HostSettings(string name, string hostDisplayName, NServiceBus.StartupDiagnosticEntries startupDiagnostic, System.Action<string, System.Exception, System.Threading.CancellationToken> criticalErrorAction, bool setupInfrastructure, NServiceBus.Settings.ReadOnlySettings coreSettings = null) { }
+        public NServiceBus.Settings.ReadOnlySettings CoreSettings { get; }
+        public System.Action<string, System.Exception, System.Threading.CancellationToken> CriticalErrorAction { get; }
+        public string HostDisplayName { get; }
+        public string Name { get; }
+        public bool SetupInfrastructure { get; }
+        public NServiceBus.StartupDiagnosticEntries StartupDiagnostic { get; }
+    }
+    [System.Obsolete("The timeout manager has been removed in favor of native delayed delivery support " +
+        "provided by transports. See the upgrade guide for more details. Will be removed " +
+        "in version 9.0.0.", true)]
+    public interface ICancelDeferredMessages
+    {
+        System.Threading.Tasks.Task CancelDeferredMessages(string messageKey, NServiceBus.Pipeline.IBehaviorContext context);
+    }
+    [System.Obsolete("Queue creation is done by TransportDefinition.Initialize. Will be removed in vers" +
+        "ion 9.0.0.", true)]
+    public interface ICreateQueues
+    {
+        [System.Obsolete("Queue creation is done by TransportDefinition.Initialize. Will be removed in vers" +
+            "ion 9.0.0.", true)]
+        System.Threading.Tasks.Task CreateQueueIfNecessary(NServiceBus.Transport.QueueBindings queueBindings, string identity);
+    }
+    [System.Obsolete("The IDispatchMessages interface has been removed. See the upgrade guide for more " +
+        "details. Use `IMessageDispatcher` instead. Will be removed in version 9.0.0.", true)]
+    public interface IDispatchMessages
+    {
+        System.Threading.Tasks.Task Dispatch(NServiceBus.Transport.TransportOperations outgoingMessages, NServiceBus.Transport.TransportTransaction transaction, NServiceBus.Extensibility.ContextBag context);
+    }
+    [System.Obsolete("Use `ISubscriptionManager` instead. Will be removed in version 9.0.0.", true)]
+    public interface IManageSubscriptions
+    {
+        [System.Obsolete("Use `ISubscriptionManager.SubscribeAll` instead. Will be removed in version 9.0.0" +
+            ".", true)]
+        System.Threading.Tasks.Task Subscribe(System.Type eventType, NServiceBus.Extensibility.ContextBag context);
+        [System.Obsolete("Use `ISubscriptionManager.Unsubscribe` instead. Will be removed in version 9.0.0." +
+            "", true)]
+        System.Threading.Tasks.Task Unsubscribe(System.Type eventType, NServiceBus.Extensibility.ContextBag context);
+    }
+    public interface IMessageDispatcher
+    {
+        System.Threading.Tasks.Task Dispatch(NServiceBus.Transport.TransportOperations outgoingMessages, NServiceBus.Transport.TransportTransaction transaction, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IMessageReceiver
+    {
+        string Id { get; }
+        NServiceBus.Transport.ISubscriptionManager Subscriptions { get; }
+        System.Threading.Tasks.Task Initialize(NServiceBus.Transport.PushRuntimeSettings limitations, NServiceBus.Transport.OnMessage onMessage, NServiceBus.Transport.OnError onError, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartReceive(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StopReceive(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOutgoingTransportOperation
+    {
+        NServiceBus.Transport.OutgoingMessage Message { get; }
+        NServiceBus.Transport.DispatchProperties Properties { get; }
+        NServiceBus.Transport.DispatchConsistency RequiredDispatchConsistency { get; }
+    }
+    [System.Obsolete("Use `IMessageReceiver` instead. Will be removed in version 9.0.0.", true)]
+    public interface IPushMessages
+    {
+        [System.Obsolete("Use `IMessageReceiver.Initialize` instead. Will be removed in version 9.0.0.", true)]
+        System.Threading.Tasks.Task Init(System.Func<NServiceBus.Transport.MessageContext, System.Threading.Tasks.Task> onMessage, System.Func<NServiceBus.Transport.ErrorContext, System.Threading.Tasks.Task<NServiceBus.Transport.ErrorHandleResult>> onError, NServiceBus.CriticalError criticalError, NServiceBus.Transport.PushSettings settings);
+        [System.Obsolete("Use `IMessageReceiver.StartReceive` instead. Will be removed in version 9.0.0.", true)]
+        void Start(NServiceBus.Transport.PushRuntimeSettings limitations);
+        [System.Obsolete("Use `IMessageReceiver.StopReceive` instead. Will be removed in version 9.0.0.", true)]
+        System.Threading.Tasks.Task Stop();
+    }
+    public interface ISubscriptionManager
+    {
+        System.Threading.Tasks.Task SubscribeAll(NServiceBus.Unicast.Messages.MessageMetadata[] eventTypes, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Unsubscribe(NServiceBus.Unicast.Messages.MessageMetadata eventType, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public class IncomingMessage
+    {
+        public IncomingMessage(string nativeMessageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body) { }
+        public byte[] Body { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string MessageId { get; }
+        public string NativeMessageId { get; }
+    }
+    public static class IncomingMessageExtensions
+    {
+        public static NServiceBus.MessageIntentEnum GetMessageIntent(this NServiceBus.Transport.IncomingMessage message) { }
+        public static string GetReplyToAddress(this NServiceBus.Transport.IncomingMessage message) { }
+    }
+    public static class LogicalAddressExtensions
+    {
+        [System.Obsolete("Use `TransportDefinition.ToTransportAddress` instead. The member currently throws" +
+            " a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public static string GetTransportAddress(this NServiceBus.Settings.ReadOnlySettings settings, NServiceBus.LogicalAddress logicalAddress) { }
+    }
+    public class MessageContext : NServiceBus.Extensibility.IExtendable
+    {
+        public MessageContext(string nativeMessageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body, NServiceBus.Transport.TransportTransaction transportTransaction, NServiceBus.Extensibility.ContextBag context) { }
+        [System.Obsolete("Use `MessageContext(string, Dictionary<string, string>, byte[], TransportTransact" +
+            "ion, ContextBag)` instead. The member currently throws a NotImplementedException" +
+            ". Will be removed in version 9.0.0.", true)]
+        public MessageContext(string messageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body, NServiceBus.Transport.TransportTransaction transportTransaction, System.Threading.CancellationTokenSource receiveCancellationTokenSource, NServiceBus.Extensibility.ContextBag context) { }
+        public byte[] Body { get; }
+        public NServiceBus.Extensibility.ContextBag Extensions { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        [System.Obsolete("Use `NativeMessageId` instead. Will be removed in version 9.0.0.", true)]
+        public string MessageId { get; }
+        public string NativeMessageId { get; }
+        [System.Obsolete("The member currently throws a NotImplementedException. Will be removed in version" +
+            " 9.0.0.", true)]
+        public System.Threading.CancellationTokenSource ReceiveCancellationTokenSource { get; }
+        public NServiceBus.Transport.TransportTransaction TransportTransaction { get; }
+    }
+    public class MulticastTransportOperation : NServiceBus.Transport.IOutgoingTransportOperation
+    {
+        public MulticastTransportOperation(NServiceBus.Transport.OutgoingMessage message, System.Type messageType, NServiceBus.Transport.DispatchProperties properties, NServiceBus.Transport.DispatchConsistency requiredDispatchConsistency = 1) { }
+        public NServiceBus.Transport.OutgoingMessage Message { get; }
+        public System.Type MessageType { get; }
+        public NServiceBus.Transport.DispatchProperties Properties { get; }
+        public NServiceBus.Transport.DispatchConsistency RequiredDispatchConsistency { get; }
+    }
+    public delegate System.Threading.Tasks.Task<NServiceBus.Transport.ErrorHandleResult> OnError(NServiceBus.Transport.ErrorContext errorContext, System.Threading.CancellationToken cancellationToken = default);
+    public delegate System.Threading.Tasks.Task OnMessage(NServiceBus.Transport.MessageContext messageContext, System.Threading.CancellationToken cancellationToken = default);
+    [System.Obsolete("This type is no longer necessary when implementing a transport. Will be removed i" +
+        "n version 9.0.0.", true)]
+    public class OutboundRoutingPolicy
+    {
+        [System.Obsolete("This type is no longer necessary when implementing a transport. The member curren" +
+            "tly throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public OutboundRoutingPolicy(NServiceBus.Transport.OutboundRoutingType sends, NServiceBus.Transport.OutboundRoutingType publishes, NServiceBus.Transport.OutboundRoutingType replies) { }
+        [System.Obsolete("Use `TransportDefinition.SupportsPublishSubscribe` instead. The member currently " +
+            "throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.Transport.OutboundRoutingType Publishes { get; }
+        [System.Obsolete("This property is no longer necessary when implementing a transport. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.Transport.OutboundRoutingType Replies { get; }
+        [System.Obsolete("This property is no longer necessary when implementing a transport. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public NServiceBus.Transport.OutboundRoutingType Sends { get; }
+    }
+    [System.Obsolete("This enum is no longer necessary when implementing a transport. Will be removed i" +
+        "n version 9.0.0.", true)]
+    public enum OutboundRoutingType
+    {
+        [System.Obsolete("This enum is no longer necessary when implementing a transport. Will be removed i" +
+            "n version 9.0.0.", true)]
+        Unicast = 0,
+        [System.Obsolete("This enum is no longer necessary when implementing a transport. Will be removed i" +
+            "n version 9.0.0.", true)]
+        Multicast = 1,
+    }
+    public class OutgoingMessage
+    {
+        public OutgoingMessage(string messageId, System.Collections.Generic.Dictionary<string, string> headers, byte[] body) { }
+        public byte[] Body { get; }
+        public System.Collections.Generic.Dictionary<string, string> Headers { get; }
+        public string MessageId { get; }
+    }
+    public class PushRuntimeSettings
+    {
+        public PushRuntimeSettings() { }
+        public PushRuntimeSettings(int maxConcurrency) { }
+        public int MaxConcurrency { get; }
+        public static NServiceBus.Transport.PushRuntimeSettings Default { get; }
+    }
+    [System.Obsolete("Use `ReceiveSettings` instead. Will be removed in version 9.0.0.", true)]
+    public class PushSettings
+    {
+        public PushSettings() { }
+    }
+    public class QueueAddress
+    {
+        public QueueAddress(string baseAddress, string discriminator, System.Collections.Generic.IReadOnlyDictionary<string, string> properties, string qualifier) { }
+        public string BaseAddress { get; }
+        public string Discriminator { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> Properties { get; }
+        public string Qualifier { get; }
+    }
+    public class QueueBindings
+    {
+        public QueueBindings() { }
+        [System.Obsolete("Receiving addresses are automatically registered. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public System.Collections.Generic.IReadOnlyCollection<string> ReceivingAddresses { get; }
+        public System.Collections.Generic.IReadOnlyCollection<string> SendingAddresses { get; }
+        [System.Obsolete("Receiving addresses are automatically registered. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public void BindReceiving(string address) { }
+        public void BindSending(string transportAddress) { }
+    }
+    public class ReceiveSettings
+    {
+        public ReceiveSettings(string id, string receiveAddress, bool usePublishSubscribe, bool purgeOnStartup, string errorQueue) { }
+        public string ErrorQueue { get; }
+        public string Id { get; set; }
+        public bool PurgeOnStartup { get; set; }
+        public string ReceiveAddress { get; set; }
+        public bool UsePublishSubscribe { get; set; }
+    }
+    [System.Obsolete("Will be removed in version 9.0.0.", true)]
+    public class StartupCheckResult
+    {
+        [System.Obsolete("Will be removed in version 9.0.0.", true)]
+        public static readonly NServiceBus.Transport.StartupCheckResult Success;
+        public StartupCheckResult() { }
+        [System.Obsolete("The member currently throws a NotImplementedException. Will be removed in version" +
+            " 9.0.0.", true)]
+        public string ErrorMessage { get; }
+        [System.Obsolete("The member currently throws a NotImplementedException. Will be removed in version" +
+            " 9.0.0.", true)]
+        public bool Succeeded { get; }
+        [System.Obsolete("The member currently throws a NotImplementedException. Will be removed in version" +
+            " 9.0.0.", true)]
+        public static NServiceBus.Transport.StartupCheckResult Failed(string errorMessage) { }
+    }
+    public abstract class TransportDefinition
+    {
+        protected TransportDefinition(NServiceBus.TransportTransactionMode defaultTransactionMode, bool supportsDelayedDelivery, bool supportsPublishSubscribe, bool supportsTTBR) { }
+        public bool SupportsDelayedDelivery { get; }
+        public bool SupportsPublishSubscribe { get; }
+        public bool SupportsTTBR { get; }
+        public virtual NServiceBus.TransportTransactionMode TransportTransactionMode { get; set; }
+        public abstract System.Collections.Generic.IReadOnlyCollection<NServiceBus.TransportTransactionMode> GetSupportedTransactionModes();
+        public abstract System.Threading.Tasks.Task<NServiceBus.Transport.TransportInfrastructure> Initialize(NServiceBus.Transport.HostSettings hostSettings, NServiceBus.Transport.ReceiveSettings[] receivers, string[] sendingAddresses, System.Threading.CancellationToken cancellationToken = default);
+        public abstract string ToTransportAddress(NServiceBus.Transport.QueueAddress address);
+    }
+    public abstract class TransportInfrastructure
+    {
+        protected TransportInfrastructure() { }
+        public NServiceBus.Transport.IMessageDispatcher Dispatcher { get; set; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, NServiceBus.Transport.IMessageReceiver> Receivers { get; set; }
+        public abstract System.Threading.Tasks.Task Shutdown(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public class TransportOperation
+    {
+        public TransportOperation(NServiceBus.Transport.OutgoingMessage message, NServiceBus.Routing.AddressTag addressTag, NServiceBus.Transport.DispatchProperties properties = null, NServiceBus.Transport.DispatchConsistency requiredDispatchConsistency = 1) { }
+        public NServiceBus.Routing.AddressTag AddressTag { get; }
+        public NServiceBus.Transport.OutgoingMessage Message { get; }
+        public NServiceBus.Transport.DispatchProperties Properties { get; }
+        public NServiceBus.Transport.DispatchConsistency RequiredDispatchConsistency { get; set; }
+    }
+    public class TransportOperations
+    {
+        public TransportOperations(params NServiceBus.Transport.TransportOperation[] transportOperations) { }
+        public System.Collections.Generic.List<NServiceBus.Transport.MulticastTransportOperation> MulticastTransportOperations { get; }
+        public System.Collections.Generic.List<NServiceBus.Transport.UnicastTransportOperation> UnicastTransportOperations { get; }
+    }
+    [System.Obsolete("This type is no longer necessary when implementing a transport. Will be removed i" +
+        "n version 9.0.0.", true)]
+    public class TransportSendInfrastructure
+    {
+        [System.Obsolete("This type is no longer necessary when implementing a transport. The member curren" +
+            "tly throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public TransportSendInfrastructure(System.Func<NServiceBus.Transport.IMessageDispatcher> dispatcherFactory, System.Func<System.Threading.Tasks.Task<NServiceBus.Transport.StartupCheckResult>> preStartupCheck) { }
+        [System.Obsolete("Use `TransportInfrastructure.Dispatcher` instead. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public System.Func<NServiceBus.Transport.IMessageDispatcher> DispatcherFactory { get; }
+        [System.Obsolete("Pre-startup checks have been removed. The member currently throws a NotImplemente" +
+            "dException. Will be removed in version 9.0.0.", true)]
+        public System.Func<System.Threading.Tasks.Task<NServiceBus.Transport.StartupCheckResult>> PreStartupCheck { get; }
+    }
+    [System.Obsolete("This type is no longer necessary when implementing a transport. Will be removed i" +
+        "n version 9.0.0.", true)]
+    public class TransportSubscriptionInfrastructure
+    {
+        [System.Obsolete("This type is no longer necessary when implementing a transport. The member curren" +
+            "tly throws a NotImplementedException. Will be removed in version 9.0.0.", true)]
+        public TransportSubscriptionInfrastructure(System.Func<NServiceBus.Transport.IManageSubscriptions> subscriptionManagerFactory) { }
+    }
+    public sealed class TransportTransaction : NServiceBus.Extensibility.ContextBag
+    {
+        public TransportTransaction() { }
+    }
+    public class UnicastTransportOperation : NServiceBus.Transport.IOutgoingTransportOperation
+    {
+        public UnicastTransportOperation(NServiceBus.Transport.OutgoingMessage message, string destination, NServiceBus.Transport.DispatchProperties properties, NServiceBus.Transport.DispatchConsistency requiredDispatchConsistency = 1) { }
+        public string Destination { get; }
+        public NServiceBus.Transport.OutgoingMessage Message { get; }
+        public NServiceBus.Transport.DispatchProperties Properties { get; }
+        public NServiceBus.Transport.DispatchConsistency RequiredDispatchConsistency { get; }
+    }
+}
+namespace NServiceBus.Unicast
+{
+    [System.Obsolete("Will be removed in version 9.0.0.", true)]
+    public static class BuilderExtensions
+    {
+        [System.Obsolete("Replace usages of ForEach<T> with a foreach loop. The member currently throws a N" +
+            "otImplementedException. Will be removed in version 9.0.0.", true)]
+        public static void ForEach<T>(this System.IServiceProvider builder, System.Action<T> action) { }
+    }
+    public class MessageEventArgs : System.EventArgs
+    {
+        public MessageEventArgs(object msg) { }
+        public object Message { get; }
+    }
+    public class MessageHandlerRegistry
+    {
+        public MessageHandlerRegistry() { }
+        public void Clear() { }
+        public System.Collections.Generic.List<NServiceBus.Pipeline.MessageHandler> GetHandlersFor(System.Type messageType) { }
+        public System.Collections.Generic.IEnumerable<System.Type> GetMessageTypes() { }
+        public void RegisterHandler(System.Type handlerType) { }
+    }
+    public class MessagesEventArgs : System.EventArgs
+    {
+        public MessagesEventArgs(object[] messages) { }
+        public object[] Messages { get; }
+    }
+}
+namespace NServiceBus.Unicast.Messages
+{
+    public class MessageMetadata
+    {
+        public MessageMetadata(System.Type messageType) { }
+        public MessageMetadata(System.Type messageType, System.Type[] messageHierarchy) { }
+        public System.Type[] MessageHierarchy { get; }
+        public System.Type MessageType { get; }
+    }
+    public class MessageMetadataRegistry
+    {
+        public NServiceBus.Unicast.Messages.MessageMetadata GetMessageMetadata(string messageTypeIdentifier) { }
+        public NServiceBus.Unicast.Messages.MessageMetadata GetMessageMetadata(System.Type messageType) { }
+    }
+}
+namespace NServiceBus.Unicast.Queuing
+{
+    [System.Serializable]
+    public class QueueNotFoundException : System.Exception
+    {
+        public QueueNotFoundException() { }
+        protected QueueNotFoundException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public QueueNotFoundException(string queue, string message, System.Exception inner) { }
+        public string Queue { get; set; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+}
+namespace NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions
+{
+    public interface IInitializableSubscriptionStorage : NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions.ISubscriptionStorage
+    {
+        void Init();
+    }
+    public interface ISubscriptionStorage
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions.Subscriber>> GetSubscriberAddressesForMessage(System.Collections.Generic.IEnumerable<NServiceBus.Unicast.Subscriptions.MessageType> messageTypes, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Subscribe(NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions.Subscriber subscriber, NServiceBus.Unicast.Subscriptions.MessageType messageType, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Unsubscribe(NServiceBus.Unicast.Subscriptions.MessageDrivenSubscriptions.Subscriber subscriber, NServiceBus.Unicast.Subscriptions.MessageType messageType, NServiceBus.Extensibility.ContextBag context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public class Subscriber
+    {
+        public Subscriber(string transportAddress, string endpoint) { }
+        public string Endpoint { get; }
+        public string TransportAddress { get; }
+    }
+}
+namespace NServiceBus.Unicast.Subscriptions
+{
+    public class MessageType
+    {
+        public MessageType(string messageTypeString) { }
+        public MessageType(System.Type type) { }
+        public MessageType(string typeName, string versionString) { }
+        public MessageType(string typeName, System.Version version) { }
+        public string TypeName { get; }
+        public System.Version Version { get; }
+        public bool Equals(NServiceBus.Unicast.Subscriptions.MessageType other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static bool operator !=(NServiceBus.Unicast.Subscriptions.MessageType left, NServiceBus.Unicast.Subscriptions.MessageType right) { }
+        public static bool operator ==(NServiceBus.Unicast.Subscriptions.MessageType left, NServiceBus.Unicast.Subscriptions.MessageType right) { }
+    }
+}
+namespace NServiceBus.Unicast.Transport
+{
+    public static class ControlMessageFactory
+    {
+        public static NServiceBus.Transport.OutgoingMessage Create(NServiceBus.MessageIntentEnum intent) { }
+    }
+}
+namespace NServiceBus.UnitOfWork
+{
+    [System.Obsolete(@"The unit of work pattern is more straightforward to implement in a pipeline behavior, where the using keyword and try/catch blocks can be used. Use `NServiceBus.Pipeline.Behavior<TContext>` instead. Will be treated as an error from version 9.0.0. Will be removed in version 10.0.0.", false)]
+    public interface IManageUnitsOfWork
+    {
+        System.Threading.Tasks.Task Begin();
+        System.Threading.Tasks.Task End(System.Exception ex = null);
+    }
+}

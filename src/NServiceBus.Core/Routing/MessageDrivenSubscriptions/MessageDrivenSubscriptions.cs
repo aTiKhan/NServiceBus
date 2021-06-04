@@ -1,17 +1,24 @@
 namespace NServiceBus.Features
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using Transport;
     using Unicast.Messages;
     using Unicast.Subscriptions.MessageDrivenSubscriptions;
 
     /// <summary>
     /// Allows subscribers to register by sending a subscription message to this endpoint.
+    /// ---
+    /// The goal is to remove feature classes that implemented functionality far beyond what features are "supposed" to be.
+    /// Many of those features have been moved into components instead. Now that this class is internal in V8 that
+    /// refactoring can occur.
     /// </summary>
-    [ObsoleteEx(Message = "It's not recommended to disable the MessageDrivenSubscriptions feature and this option will be removed in future versions. Use 'TransportExtensions<T>.DisablePublishing()' to avoid the need for a subscription storage if this endpoint does not publish events.",
-        RemoveInVersion = "8.0",
-        TreatAsErrorFromVersion = "8.0")]
+    [ObsoleteEx(
+        Message = "It's not recommended to disable the MessageDrivenSubscriptions feature and this option will be removed in future versions. Use 'TransportExtensions<T>.DisablePublishing()' to avoid the need for a subscription storage if this endpoint does not publish events.",
+        RemoveInVersion = "10",
+        TreatAsErrorFromVersion = "9")]
     public class MessageDrivenSubscriptions : Feature
     {
         internal const string EnablePublishingSettingsKey = "NServiceBus.PublishSubscribe.EnablePublishing";
@@ -25,7 +32,7 @@ namespace NServiceBus.Features
                 s.SetDefault(new ConfiguredPublishers());
                 s.SetDefault(EnablePublishingSettingsKey, true);
             });
-            Prerequisite(c => c.Settings.Get<TransportInfrastructure>().OutboundRoutingPolicy.Publishes == OutboundRoutingType.Unicast || SubscriptionMigrationMode.IsMigrationModeEnabled(c.Settings), "The transport supports native pub sub");
+            Prerequisite(c => c.Settings.Get<TransportDefinition>().SupportsPublishSubscribe == false || SubscriptionMigrationMode.IsMigrationModeEnabled(c.Settings), "The transport supports native pub sub");
         }
 
         /// <summary>
@@ -39,7 +46,7 @@ namespace NServiceBus.Features
                 return;
             }
 
-            var transportInfrastructure = context.Settings.Get<TransportInfrastructure>();
+            var transportDefinition = context.Settings.Get<TransportDefinition>();
             var conventions = context.Settings.Get<Conventions>();
             var enforceBestPractices = context.Routing.EnforceBestPractices;
 
@@ -60,7 +67,7 @@ namespace NServiceBus.Features
 
                 context.Pipeline.Register("UnicastPublishRouterConnector", b =>
                 {
-                    var unicastPublishRouter = new UnicastPublishRouter(b.Build<MessageMetadataRegistry>(), i => transportInfrastructure.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)), b.Build<ISubscriptionStorage>());
+                    var unicastPublishRouter = new UnicastPublishRouter(b.GetRequiredService<MessageMetadataRegistry>(), i => transportDefinition.ToTransportAddress(new QueueAddress(i.Endpoint, i.Discriminator, i.Properties, null)), b.GetRequiredService<ISubscriptionStorage>());
                     return new UnicastPublishConnector(unicastPublishRouter, distributionPolicy);
                 }, "Determines how the published messages should be routed");
 
@@ -69,8 +76,8 @@ namespace NServiceBus.Features
                 {
                     authorizer = _ => true;
                 }
-                context.Container.RegisterSingleton(authorizer);
-                context.Pipeline.Register<SubscriptionReceiverBehavior.Registration>();
+                context.Container.AddSingleton(authorizer);
+                context.Pipeline.Register(typeof(SubscriptionReceiverBehavior), "Check for subscription messages and execute the requested behavior to subscribe or unsubscribe.");
             }
             else
             {
@@ -81,10 +88,10 @@ namespace NServiceBus.Features
             if (canReceive)
             {
                 var subscriberAddress = context.Receiving.LocalAddress;
-                var subscriptionRouter = new SubscriptionRouter(publishers, endpointInstances, i => transportInfrastructure.ToTransportAddress(LogicalAddress.CreateRemoteAddress(i)));
+                var subscriptionRouter = new SubscriptionRouter(publishers, endpointInstances, i => transportDefinition.ToTransportAddress(new QueueAddress(i.Endpoint, i.Discriminator, i.Properties, null)));
 
-                context.Pipeline.Register(b => new MessageDrivenSubscribeTerminator(subscriptionRouter, subscriberAddress, context.Settings.EndpointName(), b.Build<IDispatchMessages>()), "Sends subscription requests when message driven subscriptions is in use");
-                context.Pipeline.Register(b => new MessageDrivenUnsubscribeTerminator(subscriptionRouter, subscriberAddress, context.Settings.EndpointName(), b.Build<IDispatchMessages>()), "Sends requests to unsubscribe when message driven subscriptions is in use");
+                context.Pipeline.Register(b => new MessageDrivenSubscribeTerminator(subscriptionRouter, subscriberAddress, context.Settings.EndpointName(), b.GetRequiredService<IMessageDispatcher>()), "Sends subscription requests when message driven subscriptions is in use");
+                context.Pipeline.Register(b => new MessageDrivenUnsubscribeTerminator(subscriptionRouter, subscriberAddress, context.Settings.EndpointName(), b.GetRequiredService<IMessageDispatcher>()), "Sends requests to unsubscribe when message driven subscriptions is in use");
             }
             else
             {
@@ -92,24 +99,28 @@ namespace NServiceBus.Features
                 context.Pipeline.Register(new SendOnlyUnsubscribeTerminator(), "Throws an exception when trying to unsubscribe from a send-only endpoint");
             }
 
-            context.Container.ConfigureComponent<InitializableSubscriptionStorage>(DependencyLifecycle.SingleInstance);
-
-            context.RegisterStartupTask(b => b.Build<InitializableSubscriptionStorage>());
+            // implementations of IInitializableSubscriptionStorage are optional and can be provided by persisters.
+            context.RegisterStartupTask(b => new InitializableSubscriptionStorage(b.GetService<IInitializableSubscriptionStorage>()));
         }
 
         internal class InitializableSubscriptionStorage : FeatureStartupTask
         {
-            public IInitializableSubscriptionStorage SubscriptionStorage { get; set; }
+            IInitializableSubscriptionStorage subscriptionStorage;
 
-            protected override Task OnStart(IMessageSession session)
+            public InitializableSubscriptionStorage(IInitializableSubscriptionStorage subscriptionStorage)
             {
-                SubscriptionStorage?.Init();
-                return TaskEx.CompletedTask;
+                this.subscriptionStorage = subscriptionStorage;
             }
 
-            protected override Task OnStop(IMessageSession session)
+            protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
             {
-                return TaskEx.CompletedTask;
+                subscriptionStorage?.Init();
+                return Task.CompletedTask;
+            }
+
+            protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
             }
         }
     }

@@ -22,7 +22,7 @@
             var behaviorContext = CreateBehaviorContext(messageHandler);
             AssociateSagaWithMessage(saga, behaviorContext);
 
-            await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask);
+            await terminator.Invoke(behaviorContext, _ => Task.CompletedTask);
 
             Assert.IsTrue(handlerInvoked);
         }
@@ -39,7 +39,7 @@
             var sagaInstance = AssociateSagaWithMessage(saga, behaviorContext);
             sagaInstance.MarkAsNotFound();
 
-            await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask);
+            await terminator.Invoke(behaviorContext, _ => Task.CompletedTask);
 
             Assert.IsFalse(handlerInvoked);
         }
@@ -55,7 +55,7 @@
             var sagaInstance = AssociateSagaWithMessage(new FakeSaga(), behaviorContext);
             sagaInstance.MarkAsNotFound();
 
-            await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask);
+            await terminator.Invoke(behaviorContext, _ => Task.CompletedTask);
 
             Assert.IsTrue(handlerInvoked);
         }
@@ -69,7 +69,7 @@
             var messageHandler = CreateMessageHandler((i, m, ctx) => handlerInvoked = true, new FakeMessageHandler());
             var behaviorContext = CreateBehaviorContext(messageHandler);
 
-            await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask);
+            await terminator.Invoke(behaviorContext, _ => Task.CompletedTask);
 
             Assert.IsTrue(handlerInvoked);
         }
@@ -82,11 +82,11 @@
             var messageHandler = CreateMessageHandler((i, m, ctx) => receivedMessage = m, new FakeMessageHandler());
             var behaviorContext = CreateBehaviorContext(messageHandler);
 
-            await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask);
+            await terminator.Invoke(behaviorContext, _ => Task.CompletedTask);
 
             Assert.AreSame(behaviorContext.MessageBeingHandled, receivedMessage);
         }
-        
+
         [Test]
         public void Should_rethrow_exception_with_additional_data()
         {
@@ -95,13 +95,13 @@
             var messageHandler = CreateMessageHandler((i, m, ctx) => throw thrownException, new FakeMessageHandler());
             var behaviorContext = CreateBehaviorContext(messageHandler);
 
-            var caughtException = Assert.ThrowsAsync<InvalidOperationException>(async () => await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask));
-            
+            var caughtException = Assert.ThrowsAsync<InvalidOperationException>(async () => await terminator.Invoke(behaviorContext, _ => Task.CompletedTask));
+
             Assert.AreSame(thrownException, caughtException);
             Assert.AreEqual("System.Object", caughtException.Data["Message type"]);
             Assert.AreEqual("NServiceBus.Core.Tests.Pipeline.Incoming.InvokeHandlerTerminatorTest+FakeMessageHandler", caughtException.Data["Handler type"]);
-            Assert.That(DateTimeExtensions.ToUtcDateTime((string)caughtException.Data["Handler start time"]), Is.EqualTo(DateTime.UtcNow).Within(TimeSpan.FromSeconds(5)));
-            Assert.That(DateTimeExtensions.ToUtcDateTime((string)caughtException.Data["Handler failure time"]), Is.EqualTo(DateTime.UtcNow).Within(TimeSpan.FromSeconds(5)));
+            Assert.That(DateTimeOffsetHelper.ToDateTimeOffset((string)caughtException.Data["Handler start time"]), Is.EqualTo(DateTimeOffset.UtcNow).Within(TimeSpan.FromSeconds(5)));
+            Assert.That(DateTimeOffsetHelper.ToDateTimeOffset((string)caughtException.Data["Handler failure time"]), Is.EqualTo(DateTimeOffset.UtcNow).Within(TimeSpan.FromSeconds(5)));
         }
 
         [Test]
@@ -111,7 +111,7 @@
             var messageHandler = CreateMessageHandlerThatReturnsNull((i, m, ctx) => { }, new FakeSaga());
             var behaviorContext = CreateBehaviorContext(messageHandler);
 
-            Assert.That(async () => await terminator.Invoke(behaviorContext, _ => TaskEx.CompletedTask), Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
+            Assert.That(async () => await terminator.Invoke(behaviorContext, _ => Task.CompletedTask), Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
         }
 
         static ActiveSagaInstance AssociateSagaWithMessage(FakeSaga saga, IInvokeHandlerContext behaviorContext)
@@ -126,7 +126,7 @@
             var messageHandler = new MessageHandler((instance, message, handlerContext) =>
             {
                 invocationAction(instance, message, handlerContext);
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }, handlerInstance.GetType())
             {
                 Instance = handlerInstance

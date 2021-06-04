@@ -1,21 +1,19 @@
 ﻿namespace NServiceBus
 {
     using System;
-    using System.Threading.Tasks;
     using MessageInterfaces;
-    using ObjectBuilder;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using Transport;
 
     class SendComponent
     {
-        SendComponent(IMessageMapper messageMapper, TransportInfrastructure transportInfrastructure)
+        SendComponent(IMessageMapper messageMapper)
         {
             this.messageMapper = messageMapper;
-            this.transportInfrastructure = transportInfrastructure;
         }
 
-        public static SendComponent Initialize(PipelineSettings pipelineSettings, HostingComponent.Configuration hostingConfiguration, RoutingComponent routingComponent, IMessageMapper messageMapper, TransportSeam transportSeam)
+        public static SendComponent Initialize(PipelineSettings pipelineSettings, HostingComponent.Configuration hostingConfiguration, RoutingComponent routingComponent, IMessageMapper messageMapper)
         {
             pipelineSettings.Register(new AttachSenderRelatedInfoOnMessageBehavior(), "Makes sure that outgoing messages contains relevant info on the sending endpoint.");
             pipelineSettings.Register("AuditHostInformation", new AuditHostInformationBehavior(hostingConfiguration.HostInformation, hostingConfiguration.EndpointName), "Adds audit host information");
@@ -28,36 +26,14 @@
             pipelineSettings.Register(new OutgoingPhysicalToRoutingConnector(), "Starts the message dispatch pipeline");
             pipelineSettings.Register(new RoutingToDispatchConnector(), "Decides if the current message should be batched or immediately be dispatched to the transport");
             pipelineSettings.Register(new BatchToDispatchConnector(), "Passes batched messages over to the immediate dispatch part of the pipeline");
-            pipelineSettings.Register(b => new ImmediateDispatchTerminator(b.Build<IDispatchMessages>()), "Hands the outgoing messages over to the transport for immediate delivery");
+            pipelineSettings.Register(b => new ImmediateDispatchTerminator(b.GetRequiredService<IMessageDispatcher>()), "Hands the outgoing messages over to the transport for immediate delivery");
 
-            var sendComponent = new SendComponent(messageMapper, transportSeam.TransportInfrastructure);
-
-            hostingConfiguration.Container.ConfigureComponent(() => sendComponent.GetDispatcher(), DependencyLifecycle.SingleInstance);
+            var sendComponent = new SendComponent(messageMapper);
 
             return sendComponent;
         }
 
-        [ObsoleteEx(
-            Message = "Change transport infrastructure to configure the send infrastructure at component initialization time",
-            RemoveInVersion = "8")]
-        public void ConfigureSendInfrastructureForBackwardsCompatibility()
-        {
-            transportSendInfrastructure = transportInfrastructure.ConfigureSendInfrastructure();
-        }
-
-        [ObsoleteEx(
-            Message = "Change transport infrastructure to run send pre-startup checks on component.Start",
-            RemoveInVersion = "8")]
-        public async Task InvokeSendPreStartupChecksForBackwardsCompatibility()
-        {
-            var sendResult = await transportSendInfrastructure.PreStartupCheck().ConfigureAwait(false);
-            if (!sendResult.Succeeded)
-            {
-                throw new Exception($"Pre start-up check failed: {sendResult.ErrorMessage}");
-            }
-        }
-
-        public MessageOperations CreateMessageOperations(IBuilder builder, PipelineComponent pipelineComponent)
+        public MessageOperations CreateMessageOperations(IServiceProvider builder, PipelineComponent pipelineComponent)
         {
             return new MessageOperations(
                 messageMapper,
@@ -68,15 +44,6 @@
                 pipelineComponent.CreatePipeline<IUnsubscribeContext>(builder));
         }
 
-        IDispatchMessages GetDispatcher()
-        {
-            return this.transportSendInfrastructure.DispatcherFactory();
-        }
-
-        
-
-        TransportSendInfrastructure transportSendInfrastructure;
         readonly IMessageMapper messageMapper;
-        readonly TransportInfrastructure transportInfrastructure;
     }
 }

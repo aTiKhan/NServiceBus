@@ -2,9 +2,7 @@ namespace NServiceBus
 {
     using System;
     using System.Diagnostics;
-#if NETSTANDARD
     using System.Runtime.InteropServices;
-#endif
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -13,51 +11,71 @@ namespace NServiceBus
 
     class LicenseManager
     {
-        internal bool HasLicenseExpired => result?.License.HasExpired() ?? true;
+        public bool HasLicenseExpired => result?.License.HasExpired() ?? true;
 
-        internal void InitializeLicense(string licenseText, string licenseFilePath)
+        public void InitializeLicense(string licenseText, string licenseFilePath)
         {
             var licenseSources = LicenseSources.GetLicenseSources(licenseText, licenseFilePath);
 
             result = ActiveLicense.Find("NServiceBus", licenseSources);
+            var developerLicenseUrl = CreateDeveloperLicenseUrl();
 
             LogFindResults(result);
 
             var licenseStatus = result.License.GetLicenseStatus();
-            LogLicenseStatus(licenseStatus, Logger, result.License);
+            LogLicenseStatus(licenseStatus, Logger, result.License, developerLicenseUrl);
 
             if (licenseStatus == LicenseStatus.InvalidDueToExpiredTrial)
             {
-                OpenTrialExtensionPage();
+                OpenDeveloperLicensePage(developerLicenseUrl);
             }
         }
 
-        internal void LogLicenseStatus(LicenseStatus licenseStatus, ILog logger, License license)
+        public void LogLicenseStatus(LicenseStatus licenseStatus, ILog logger, License license, string developerLicenseUrl)
         {
+            var whenLicenseExpiresPhrase = GetRemainingDaysString(license.GetDaysUntilLicenseExpires());
+            var whenUpgradeProtectedExpiresPhrase = GetRemainingDaysString(license.GetDaysUntilUpgradeProtectionExpires());
+
             switch (licenseStatus)
             {
                 case LicenseStatus.Valid:
                     break;
                 case LicenseStatus.ValidWithExpiredUpgradeProtection:
-                    logger.Warn("Upgrade protection expired. In order for us to continue to provide you with support and new versions of the Particular Service Platform, please extend your upgrade protection by visiting http://go.particular.net/upgrade-protection-expired");
+                    logger.Warn("Upgrade protection expired. In order for us to continue to provide you with support and new versions of the Particular Service Platform, contact us to renew your license: contact@particular.net");
                     break;
                 case LicenseStatus.ValidWithExpiringTrial:
-                    logger.WarnFormat("Trial license expiring {0}. To continue using the Particular Service Platform, please extend your trial or purchase a license by visiting http://go.particular.net/trial-expiring", GetRemainingDaysString(license.GetDaysUntilLicenseExpires()));
+                    if (license.IsExtendedTrial)
+                    {
+                        logger.Warn($"Development license expiring {whenLicenseExpiresPhrase}. If you’re still in development, renew your license for free at {developerLicenseUrl} otherwise email contact@particular.net");
+                    }
+                    else
+                    {
+                        logger.Warn($"Trial license expiring {whenLicenseExpiresPhrase}. Get your free development license at {developerLicenseUrl}");
+                    }
                     break;
                 case LicenseStatus.ValidWithExpiringSubscription:
-                    logger.WarnFormat("Platform license expiring {0}. To continue using the Particular Service Platform, please extend your license by visiting http://go.particular.net/license-expiring", GetRemainingDaysString(license.GetDaysUntilLicenseExpires()));
+                    logger.Warn($"License expiring {whenLicenseExpiresPhrase}. Contact us to renew your license: contact@particular.net");
                     break;
                 case LicenseStatus.ValidWithExpiringUpgradeProtection:
-                    logger.WarnFormat("Upgrade protection expiring {0}. In order for us to continue to provide you with support and new versions of the Particular Service Platform, please extend your upgrade protection by visiting http://go.particular.net/upgrade-protection-expiring", GetRemainingDaysString(license.GetDaysUntilUpgradeProtectionExpires()));
+                    logger.Warn($"Upgrade protection expiring {whenUpgradeProtectedExpiresPhrase}. Contact us to renew your license: contact@particular.net");
                     break;
                 case LicenseStatus.InvalidDueToExpiredTrial:
-                    logger.Error("Trial license expired. To continue using the Particular Service Platform, please extend your trial or purchase a license by visiting http://go.particular.net/trial-expired");
+                    if (license.IsExtendedTrial)
+                    {
+                        logger.Error($"Development license expired. If you’re still in development, renew your license for free at {developerLicenseUrl} otherwise email contact@particular.net");
+                    }
+                    else
+                    {
+                        logger.Error($"Trial license expired. Get your free development license at {developerLicenseUrl}");
+                    }
                     break;
                 case LicenseStatus.InvalidDueToExpiredSubscription:
-                    logger.Error("Platform license expired. To continue using the Particular Service Platform, please extend your license by visiting http://go.particular.net/license-expired");
+                    logger.Error("License expired. Contact us to renew your license: contact@particular.net");
                     break;
                 case LicenseStatus.InvalidDueToExpiredUpgradeProtection:
-                    logger.Error("Upgrade protection expired. In order for us to continue to provide you with support and new versions of the Particular Service Platform, please extend your upgrade protection by visiting http://go.particular.net/upgrade-protection-expired");
+                    logger.Error("Upgrade protection expired. In order for us to continue to provide you with support and new versions of the Particular Service Platform, contact us to renew your license: contact@particular.net");
+                    break;
+                default:
                     break;
             }
 
@@ -79,8 +97,7 @@ namespace NServiceBus
 
         static void LogFindResults(ActiveLicenseFindResult result)
         {
-
-            if (DebugLoggingEnabled)
+            if (Logger.IsDebugEnabled)
             {
                 var report = new StringBuilder("Looking for license in the following locations:");
 
@@ -91,11 +108,8 @@ namespace NServiceBus
 
                 Logger.Debug(report.ToString());
             }
-            else
-            {
-                var report = string.Join(Environment.NewLine, result.SelectedLicenseReport);
-                Logger.Info(report);
-            }
+
+            Logger.Info(string.Join(Environment.NewLine, result.SelectedLicenseReport));
 
 #if REGISTRYLICENSESOURCE
             if (result.Location.StartsWith("HKEY_"))
@@ -112,16 +126,11 @@ namespace NServiceBus
 #endif
         }
 
-        void OpenTrialExtensionPage()
+        void OpenDeveloperLicensePage(string developerLicenseUrl)
         {
-            var version = GitVersionInformation.MajorMinorPatch;
-            var extendedTrial = result.License.IsExtendedTrial ? "1" : "0";
-            var platform = GetPlatformCode();
-            var url = $"https://particular.net/license/nservicebus?v={version}&t={extendedTrial}&p={platform}";
-
             if (!(Debugger.IsAttached && Environment.UserInteractive))
             {
-                Logger.WarnFormat("To extend your trial license, visit: {0}", url);
+                Logger.WarnFormat("To extend your trial license, visit: {0}", developerLicenseUrl);
 
                 return;
             }
@@ -132,13 +141,13 @@ namespace NServiceBus
                 {
                     try
                     {
-                        Logger.WarnFormat("Opening browser to: {0}", url);
+                        Logger.WarnFormat("Opening browser to: {0}", developerLicenseUrl);
 
-                        var opened = Browser.TryOpen(url);
+                        var opened = Browser.TryOpen(developerLicenseUrl);
 
                         if (!opened)
                         {
-                            Logger.WarnFormat("Unable to open browser. To extend your trial license, visit: {0}", url);
+                            Logger.WarnFormat("Unable to open browser. To extend your trial license, visit: {0}", developerLicenseUrl);
                         }
 
                         Task.Delay(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
@@ -155,7 +164,14 @@ namespace NServiceBus
             }
         }
 
-#if NETSTANDARD
+        string CreateDeveloperLicenseUrl()
+        {
+            var version = GitVersionInformation.MajorMinorPatch;
+            var isRenewal = result.License.IsExtendedTrial ? "1" : "0";
+            var platform = GetPlatformCode();
+            return $"https://particular.net/license/nservicebus?v={version}&t={isRenewal}&p={platform}";
+        }
+
         string GetPlatformCode()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -175,13 +191,9 @@ namespace NServiceBus
 
             return "unknown";
         }
-#else
-        string GetPlatformCode() => "windows";
-#endif
 
-        ActiveLicenseFindResult result;
+        internal ActiveLicenseFindResult result;
 
         static readonly ILog Logger = LogManager.GetLogger(typeof(LicenseManager));
-        static readonly bool DebugLoggingEnabled = Logger.IsDebugEnabled;
     }
 }

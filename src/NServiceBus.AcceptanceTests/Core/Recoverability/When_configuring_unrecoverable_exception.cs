@@ -13,6 +13,8 @@ namespace NServiceBus.AcceptanceTests.Core.Recoverability
         [Test]
         public void Should_move_to_error_queue_without_retries()
         {
+            Requires.DelayedDelivery();
+
             Context context = null;
 
             var exception = Assert.ThrowsAsync<MessageFailedException>(async () =>
@@ -52,13 +54,18 @@ namespace NServiceBus.AcceptanceTests.Core.Recoverability
 
             class InitiatingHandler : IHandleMessages<InitiatingMessage>
             {
-                public Context TestContext { get; set; }
+                public InitiatingHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(InitiatingMessage initiatingMessage, IMessageHandlerContext context)
                 {
-                    TestContext.HandlerInvoked++;
+                    testContext.HandlerInvoked++;
                     throw new CustomException();
                 }
+
+                Context testContext;
             }
         }
 

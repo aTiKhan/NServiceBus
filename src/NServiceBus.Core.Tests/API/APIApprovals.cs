@@ -7,22 +7,14 @@
     [TestFixture]
     public class APIApprovals
     {
-#if NETFRAMEWORK
         [Test]
         public void ApproveNServiceBus()
         {
-            var publicApi = ApiGenerator.GeneratePublicApi(typeof(Endpoint).Assembly, excludeAttributes: new[] { "Particular.Licensing.ReleaseDateAttribute" });
-            Approver.Verify(publicApi, scenario: "netframework");
+            var publicApi = typeof(Endpoint).Assembly.GeneratePublicApi(new ApiGeneratorOptions
+            {
+                ExcludeAttributes = new[] { "System.Runtime.Versioning.TargetFrameworkAttribute", "System.Reflection.AssemblyMetadataAttribute" }
+            });
+            Approver.Verify(publicApi);
         }
-#endif
-
-#if NETCOREAPP
-        [Test]
-        public void ApproveNServiceBus()
-        {
-            var publicApi = ApiGenerator.GeneratePublicApi(typeof(Endpoint).Assembly, excludeAttributes: new[] { "Particular.Licensing.ReleaseDateAttribute" });
-            Approver.Verify(publicApi, scenario: "netstandard");
-        }
-#endif
     }
 }

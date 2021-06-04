@@ -3,8 +3,9 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
-    using Extensibility;
+    using NServiceBus.Extensibility;
     using NUnit.Framework;
     using Transport;
 
@@ -130,7 +131,7 @@
             Assert.IsEmpty(messageRetriedNotifications);
             Assert.AreEqual("message-id", failure.Message.MessageId);
         }
-        
+
         [Test]
         public async Task When_discard_action_returned_should_discard_message()
         {
@@ -162,14 +163,14 @@
 
         static ErrorContext CreateErrorContext(Exception raisedException = null, string exceptionMessage = "default-message", string messageId = "default-id", int numberOfDeliveryAttempts = 1)
         {
-            return new ErrorContext(raisedException ?? new Exception(exceptionMessage), new Dictionary<string, string>(), messageId, new byte[0], new TransportTransaction(), numberOfDeliveryAttempts);
+            return new ErrorContext(raisedException ?? new Exception(exceptionMessage), new Dictionary<string, string>(), messageId, new byte[0], new TransportTransaction(), numberOfDeliveryAttempts, new ContextBag());
         }
 
         RecoverabilityExecutor CreateExecutor(Func<RecoverabilityConfig, ErrorContext, RecoverabilityAction> policy, bool delayedRetriesSupported = true, bool immediateRetriesSupported = true, bool raiseNotifications = true)
         {
             messageRetriedNotifications = new List<MessageToBeRetried>();
             var messageRetryNotification = new Notification<MessageToBeRetried>();
-            messageRetryNotification.Subscribe(e =>
+            messageRetryNotification.Subscribe((e, _) =>
             {
                 messageRetriedNotifications.Add(e);
                 return Task.FromResult(0);
@@ -177,7 +178,7 @@
 
             messageFaultedNotifications = new List<MessageFaulted>();
             var messageFaultedNotification = new Notification<MessageFaulted>();
-            messageFaultedNotification.Subscribe(e =>
+            messageFaultedNotification.Subscribe((e, _) =>
             {
                 messageFaultedNotifications.Add(e);
                 return Task.FromResult(0);
@@ -251,12 +252,12 @@
                     new UnsupportedAction()
                 }).Invoke;
             }
-            
+
             public static Func<RecoverabilityConfig, ErrorContext, RecoverabilityAction> Discard(string reason)
             {
                 return new RetryPolicy(new[]
                 {
-                    new Discard(reason), 
+                    new Discard(reason),
                 }).Invoke;
             }
 
@@ -267,14 +268,14 @@
         {
         }
 
-        class FakeDispatcher : IDispatchMessages
+        class FakeDispatcher : IMessageDispatcher
         {
             public TransportOperations TransportOperations { get; private set; }
 
-            public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+            public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
             {
                 TransportOperations = outgoingMessages;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
     }

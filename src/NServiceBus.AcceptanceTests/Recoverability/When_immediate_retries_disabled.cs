@@ -40,9 +40,9 @@
             {
                 EndpointSetup<DefaultServer>((configure, context) =>
                 {
-                    var scenarioContext = (Context) context.ScenarioContext;
+                    var scenarioContext = (Context)context.ScenarioContext;
                     configure.Recoverability().Immediate(immediate => immediate.NumberOfRetries(0));
-                    configure.Recoverability().Failed(f => f.OnMessageSentToErrorQueue(message =>
+                    configure.Recoverability().Failed(f => f.OnMessageSentToErrorQueue((message, _) =>
                     {
                         scenarioContext.GaveUp = true;
                         return Task.FromResult(0);
@@ -52,17 +52,22 @@
 
             class MessageToBeRetriedHandler : IHandleMessages<MessageToBeRetried>
             {
-                public Context Context { get; set; }
+                public MessageToBeRetriedHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToBeRetried message, IMessageHandlerContext context)
                 {
-                    if (Context.Id != message.ContextId)
+                    if (testContext.Id != message.ContextId)
                     {
                         return Task.FromResult(0);
                     }
-                    Context.NumberOfTimesInvoked++;
+                    testContext.NumberOfTimesInvoked++;
                     throw new SimulatedException();
                 }
+
+                Context testContext;
             }
         }
 

@@ -1,6 +1,7 @@
-﻿// ReSharper disable PartialTypeWithSinglePart
-namespace NServiceBus.Testing
+﻿namespace NServiceBus.Testing
 {
+    using System;
+    using Microsoft.Extensions.DependencyInjection;
     using ObjectBuilder;
     using Pipeline;
 
@@ -14,23 +15,30 @@ namespace NServiceBus.Testing
         /// </summary>
         protected TestableIncomingContext(IMessageCreator messageCreator = null) : base(messageCreator)
         {
+
         }
 
         /// <summary>
-        /// A fake <see cref="IBuilder" /> implementation. If you want to provide your own <see cref="IBuilder" /> implementation
+        /// A fake <see cref="IServiceProvider" /> implementation. If you want to provide your own <see cref="IBuilder" /> implementation
         /// override <see cref="GetBuilder" />.
         /// </summary>
-        public FakeBuilder Builder { get; set; } = new FakeBuilder();
+        public IServiceCollection Services { get; set; } = new ServiceCollection();
 
-        IBuilder IBehaviorContext.Builder => GetBuilder();
+        IServiceProvider IBehaviorContext.Builder => GetBuilder();
+
+        IServiceProvider builder = null;
 
         /// <summary>
         /// Selects the builder returned by <see cref="IBehaviorContext.Builder" />. Override this method to provide your custom
-        /// <see cref="IBuilder" /> implementation.
+        /// <see cref="IServiceProvider" /> implementation.
         /// </summary>
-        protected virtual IBuilder GetBuilder()
+        protected virtual IServiceProvider GetBuilder()
         {
-            return Builder;
+            if (builder == null)
+            {
+                builder = Services.BuildServiceProvider();
+            }
+            return builder;
         }
     }
 }

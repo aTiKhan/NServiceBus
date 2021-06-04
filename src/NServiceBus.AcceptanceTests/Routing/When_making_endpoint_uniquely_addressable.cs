@@ -39,7 +39,7 @@
             {
                 EndpointSetup<DefaultServer>((c, r) =>
                 {
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyMessage), ReceiverEndpoint);
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), ReceiverEndpoint);
                 });
             }
         }
@@ -50,8 +50,7 @@
             {
                 EndpointSetup<DefaultServer>((c, r) =>
                 {
-                    var routing = c.ConfigureTransport().Routing();
-                    routing.RouteToEndpoint(typeof(MyMessage), ReceiverEndpoint);
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), ReceiverEndpoint);
                     c.GetSettings().GetOrCreate<EndpointInstances>()
                         .AddOrReplaceInstances("testing", new List<EndpointInstance>
                         {
@@ -70,13 +69,18 @@
 
             public class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
                 {
-                    Interlocked.Increment(ref Context.MessagesReceived);
+                    Interlocked.Increment(ref testContext.MessagesReceived);
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

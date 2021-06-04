@@ -39,14 +39,19 @@
 
             public class MessageToForwardHandler : IHandleMessages<MessageToForward>
             {
-                public Context Context { get; set; }
+                public MessageToForwardHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToForward message, IMessageHandlerContext context)
                 {
-                    Context.ForwardedHeaders = context.MessageHeaders;
-                    Context.GotForwardedMessage = true;
+                    testContext.ForwardedHeaders = context.MessageHeaders;
+                    testContext.GotForwardedMessage = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -59,13 +64,18 @@
 
             public class MessageToForwardHandler : IHandleMessages<MessageToForward>
             {
-                public Context Context { get; set; }
+                public MessageToForwardHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(MessageToForward message, IMessageHandlerContext context)
                 {
-                    Context.ReceivedHeaders = context.MessageHeaders.ToDictionary(x => x.Key, x => x.Value);
+                    testContext.ReceivedHeaders = context.MessageHeaders.ToDictionary(x => x.Key, x => x.Value);
                     return context.ForwardCurrentMessageTo("message_forward_receiver");
                 }
+
+                Context testContext;
             }
         }
 

@@ -3,12 +3,12 @@ namespace NServiceBus.Core.Tests.DataBus
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Runtime.Serialization.Formatters.Binary;
+    using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus.DataBus;
     using NServiceBus.Pipeline;
-    using Unicast.Messages;
     using NUnit.Framework;
+    using Unicast.Messages;
 
     [TestFixture]
     class When_applying_the_databus_message_mutator_to_incoming_messages
@@ -20,19 +20,20 @@ namespace NServiceBus.Core.Tests.DataBus
             var databusKey = Guid.NewGuid().ToString();
 
             var message = new LogicalMessage(new MessageMetadata(typeof(MessageWithDataBusProperty)), new MessageWithDataBusProperty
-                              {
-                                  DataBusProperty = new DataBusProperty<string>("not used in this test")
-                                  {
-                                      Key = propertyKey
-                                  }
-                              });
+            {
+                DataBusProperty = new DataBusProperty<string>("not used in this test")
+                {
+                    Key = propertyKey
+                }
+            });
 
             var fakeDatabus = new FakeDataBus();
-            var receiveBehavior = new DataBusReceiveBehavior(fakeDatabus, new DefaultDataBusSerializer(), new Conventions());
+            var receiveBehavior = new DataBusReceiveBehavior(fakeDatabus, new XmlDataBusSerializer<string>(), new Conventions());
 
             using (var stream = new MemoryStream())
             {
-                new BinaryFormatter().Serialize(stream, "test");
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(string));
+                serializer.Serialize(stream, "test");
                 stream.Position = 0;
 
                 fakeDatabus.StreamsToReturn[databusKey] = stream;
@@ -47,7 +48,7 @@ namespace NServiceBus.Core.Tests.DataBus
                             {"NServiceBus.DataBus." + propertyKey, databusKey}
                         },
                         null),
-                    ctx => TaskEx.CompletedTask);
+                    ctx => Task.CompletedTask);
             }
 
             var instance = (MessageWithDataBusProperty)message.Instance;
@@ -57,19 +58,19 @@ namespace NServiceBus.Core.Tests.DataBus
 
         class FakeDataBus : IDataBus
         {
-            public Dictionary<string,Stream> StreamsToReturn = new Dictionary<string, Stream>();
+            public Dictionary<string, Stream> StreamsToReturn = new Dictionary<string, Stream>();
 
-            public Task<Stream> Get(string key)
+            public Task<Stream> Get(string key, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(StreamsToReturn[key]);
             }
 
-            public Task<string> Put(Stream stream, TimeSpan timeToBeReceived)
+            public Task<string> Put(Stream stream, TimeSpan timeToBeReceived, CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();
             }
 
-            public Task Start()
+            public Task Start(CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();
             }

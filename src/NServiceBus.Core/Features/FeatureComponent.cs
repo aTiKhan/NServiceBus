@@ -2,9 +2,9 @@
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Features;
-    using ObjectBuilder;
     using Settings;
 
     class FeatureComponent
@@ -31,14 +31,14 @@
             settings.AddStartupDiagnosticsSection("Features", featureStats);
         }
 
-        public Task Start(IBuilder builder, IMessageSession messageSession)
+        public Task Start(IServiceProvider builder, IMessageSession messageSession, CancellationToken cancellationToken = default)
         {
-            return featureActivator.StartFeatures(builder, messageSession);
+            return featureActivator.StartFeatures(builder, messageSession, cancellationToken);
         }
 
-        public Task Stop()
+        public Task Stop(CancellationToken cancellationToken = default)
         {
-            return featureActivator.StopFeatures();
+            return featureActivator.StopFeatures(cancellationToken);
         }
 
         static bool IsFeature(Type type)

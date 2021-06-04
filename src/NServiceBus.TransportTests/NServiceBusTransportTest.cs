@@ -6,29 +6,31 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using DeliveryConstraints;
-    using Extensibility;
     using Logging;
     using NUnit.Framework;
     using Routing;
-    using Settings;
     using Transport;
 
     public abstract class NServiceBusTransportTest
     {
+        static NServiceBusTransportTest()
+        {
+            LogFactory = new TransportTestLoggerFactory();
+            LogManager.UseFactory(LogFactory);
+        }
+
         [SetUp]
         public void SetUp()
         {
             testId = Guid.NewGuid().ToString();
 
-            LogFactory = new TransportTestLoggerFactory();
-            LogManager.UseFactory(LogFactory);
+            LogFactory.LogItems.Clear();
 
             //when using [TestCase] NUnit will reuse the same test instance so we need to make sure that the message pump is a fresh one
-            MessagePump = null;
-            TransportInfrastructure = null;
-            Configurer = null;
+            transportInfrastructure = null;
+            configurer = null;
             testCancellationTokenSource = null;
+            receiver = null;
         }
 
         static IConfigureTransportInfrastructure CreateConfigurer()
@@ -50,12 +52,12 @@
 
             if (configurerType == null)
             {
-                throw new InvalidOperationException($"Transport Test project must include a non-namespaced class named '{typeName}' implementing {typeof(IConfigureTransportInfrastructure).Name}.");
+                throw new InvalidOperationException($"Transport Test project must include a non-namespaced class named '{typeName}' implementing {nameof(IConfigureTransportInfrastructure)}.");
             }
 
             if (!(Activator.CreateInstance(configurerType) is IConfigureTransportInfrastructure configurer))
             {
-                throw new InvalidOperationException($"{typeName} does not implement {typeof(IConfigureTransportInfrastructure).Name}.");
+                throw new InvalidOperationException($"{typeName} does not implement {nameof(IConfigureTransportInfrastructure)}.");
             }
 
             return configurer;
@@ -64,86 +66,68 @@
         [TearDown]
         public void TearDown()
         {
+            StopPump().GetAwaiter().GetResult();
+            transportInfrastructure?.Shutdown().GetAwaiter().GetResult();
+            configurer?.Cleanup().GetAwaiter().GetResult();
             testCancellationTokenSource?.Dispose();
-            MessagePump?.Stop().GetAwaiter().GetResult();
-            TransportInfrastructure?.Stop().GetAwaiter().GetResult();
-            Configurer?.Cleanup().GetAwaiter().GetResult();
-
-            transportSettings.Clear();
         }
 
-        protected async Task StartPump(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, TransportTransactionMode transactionMode, Action<string, Exception> onCriticalError = null)
+        protected async Task StartPump(OnMessage onMessage, OnError onError, TransportTransactionMode transactionMode, Action<string, Exception, CancellationToken> onCriticalError = null, CancellationToken cancellationToken = default)
         {
+            onMessage = onMessage ?? throw new ArgumentNullException(nameof(onMessage));
+            onError = onError ?? throw new ArgumentNullException(nameof(onError));
+
             InputQueueName = GetTestName() + transactionMode;
             ErrorQueueName = $"{InputQueueName}.error";
 
-            transportSettings.Set("NServiceBus.Routing.EndpointName", InputQueueName);
-            transportSettings.Set(new StartupDiagnosticEntries());
+            configurer = CreateConfigurer();
 
-            var queueBindings = new QueueBindings();
-            queueBindings.BindReceiving(InputQueueName);
-            queueBindings.BindSending(ErrorQueueName);
-            transportSettings.Set(ErrorQueueSettings.SettingsKey, ErrorQueueName);
-            transportSettings.Set(queueBindings);
-
-            transportSettings.Set(new EndpointInstances());
-
-            Configurer = CreateConfigurer();
-
-            var configuration = Configurer.Configure(transportSettings, transactionMode);
-
-            TransportInfrastructure = configuration.TransportInfrastructure;
-
-            IgnoreUnsupportedTransactionModes(transactionMode);
-            IgnoreUnsupportedDeliveryConstraints();
-
-            ReceiveInfrastructure = TransportInfrastructure.ConfigureReceiveInfrastructure();
-
-            var queueCreator = ReceiveInfrastructure.QueueCreatorFactory();
-            var userName = GetUserName();
-            await queueCreator.CreateQueueIfNecessary(queueBindings, userName);
-
-            var result = await ReceiveInfrastructure.PreStartupCheck();
-            if (result.Succeeded == false)
-            {
-                throw new Exception($"Pre start-up check failed: {result.ErrorMessage}");
-            }
-
-            await TransportInfrastructure.Start();
-
-            SendInfrastructure = TransportInfrastructure.ConfigureSendInfrastructure();
-            lazyDispatcher = new Lazy<IDispatchMessages>(() => SendInfrastructure.DispatcherFactory());
-
-            MessagePump = ReceiveInfrastructure.MessagePumpFactory();
-            await MessagePump.Init(
-                context =>
+            var hostSettings = new HostSettings(
+                InputQueueName,
+                string.Empty,
+                new StartupDiagnosticEntries(),
+                (message, ex, token) =>
                 {
-                    if (context.Headers.ContainsKey(TestIdHeaderName) && context.Headers[TestIdHeaderName] == testId)
+                    if (onCriticalError == null)
                     {
-                        return onMessage(context);
+                        testCancellationTokenSource.Cancel();
+                        Assert.Fail($"{message}{Environment.NewLine}{ex}");
                     }
 
-                    return Task.FromResult(0);
+                    onCriticalError(message, ex, token);
                 },
-                context =>
-                {
-                    if (context.Message.Headers.ContainsKey(TestIdHeaderName) && context.Message.Headers[TestIdHeaderName] == testId)
-                    {
-                        return onError(context);
-                    }
+                true);
 
-                    return Task.FromResult(ErrorHandleResult.Handled);
-                },
-                new FakeCriticalError(onCriticalError),
-                new PushSettings(InputQueueName, ErrorQueueName, configuration.PurgeInputQueueOnStartup, transactionMode));
+            var transport = configurer.CreateTransportDefinition();
 
-            result = await SendInfrastructure.PreStartupCheck();
-            if (result.Succeeded == false)
+            IgnoreUnsupportedTransactionModes(transport, transactionMode);
+            transport.TransportTransactionMode = transactionMode;
+
+            transportInfrastructure = await configurer.Configure(transport, hostSettings, InputQueueName, ErrorQueueName, cancellationToken);
+
+            receiver = transportInfrastructure.Receivers.Single().Value;
+
+            await receiver.Initialize(
+                new PushRuntimeSettings(8),
+                (context, token) =>
+                    context.Headers.Contains(TestIdHeaderName, testId) ? onMessage(context, token) : Task.CompletedTask,
+                (context, token) =>
+                    context.Message.Headers.Contains(TestIdHeaderName, testId) ? onError(context, token) : Task.FromResult(ErrorHandleResult.Handled),
+                cancellationToken);
+
+            await receiver.StartReceive(cancellationToken);
+        }
+
+        protected async Task StopPump(CancellationToken cancellationToken = default)
+        {
+            if (receiver == null)
             {
-                throw new Exception($"Pre start-up check failed: {result.ErrorMessage}");
+                return;
             }
 
-            MessagePump.Start(configuration.PushRuntimeSettings);
+            await receiver.StopReceive(cancellationToken);
+
+            receiver = null;
         }
 
         string GetUserName()
@@ -156,63 +140,70 @@
             return Environment.UserName;
         }
 
-        void IgnoreUnsupportedDeliveryConstraints()
+        void IgnoreUnsupportedTransactionModes(TransportDefinition transportDefinition, TransportTransactionMode requestedTransactionMode)
         {
-            var supportedDeliveryConstraints = TransportInfrastructure.DeliveryConstraints.ToList();
-            var unsupportedDeliveryConstraints = requiredDeliveryConstraints.Where(required => !supportedDeliveryConstraints.Contains(required))
-                .ToList();
-
-            if (unsupportedDeliveryConstraints.Any())
-            {
-                var unsupported = string.Join(",", unsupportedDeliveryConstraints.Select(c => c.Name));
-                Assert.Ignore($"Transport doesn't support required delivery constraint(s) {unsupported}");
-            }
-        }
-
-        void IgnoreUnsupportedTransactionModes(TransportTransactionMode requestedTransactionMode)
-        {
-            if (TransportInfrastructure.TransactionMode < requestedTransactionMode)
+            if (!transportDefinition.GetSupportedTransactionModes().Contains(requestedTransactionMode))
             {
                 Assert.Ignore($"Only relevant for transports supporting {requestedTransactionMode} or higher");
             }
         }
 
-        protected Task SendMessage(string address,
+        protected Task SendMessage(
+            string address,
             Dictionary<string, string> headers = null,
             TransportTransaction transportTransaction = null,
-            List<DeliveryConstraint> deliveryConstraints = null,
-            DispatchConsistency dispatchConsistency = DispatchConsistency.Default)
+            DispatchProperties dispatchProperties = null,
+            DispatchConsistency dispatchConsistency = DispatchConsistency.Default,
+            byte[] body = null,
+            CancellationToken cancellationToken = default)
         {
             var messageId = Guid.NewGuid().ToString();
-            var message = new OutgoingMessage(messageId, headers ?? new Dictionary<string, string>(), new byte[0]);
+            var message = new OutgoingMessage(messageId, headers ?? new Dictionary<string, string>(), body ?? Array.Empty<byte>());
 
             if (message.Headers.ContainsKey(TestIdHeaderName) == false)
             {
                 message.Headers.Add(TestIdHeaderName, testId);
             }
 
-            var dispatcher = lazyDispatcher.Value;
-
             if (transportTransaction == null)
             {
                 transportTransaction = new TransportTransaction();
             }
 
-            var transportOperation = new TransportOperation(message, new UnicastAddressTag(address), dispatchConsistency, deliveryConstraints ?? new List<DeliveryConstraint>());
+            var transportOperation = new TransportOperation(message, new UnicastAddressTag(address), dispatchProperties, dispatchConsistency);
 
-            return dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, new ContextBag());
+            return transportInfrastructure.Dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, cancellationToken);
         }
 
         protected void OnTestTimeout(Action onTimeoutAction)
         {
-            testCancellationTokenSource = Debugger.IsAttached ? new CancellationTokenSource() : new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            testCancellationTokenSource = Debugger.IsAttached ? new CancellationTokenSource() : new CancellationTokenSource(TestTimeout);
 
             testCancellationTokenSource.Token.Register(onTimeoutAction);
         }
 
-        protected void RequireDeliveryConstraint<T>() where T : DeliveryConstraint
+        protected static TaskCompletionSource<TResult> CreateTaskCompletionSource<TResult>()
         {
-            requiredDeliveryConstraints.Add(typeof(T));
+            var source = new TaskCompletionSource<TResult>();
+
+            if (!Debugger.IsAttached)
+            {
+                _ = new CancellationTokenSource(TestTimeout).Token.Register(() => _ = source.TrySetException(new Exception("The test timed out.")));
+            }
+
+            return source;
+        }
+
+        protected static TaskCompletionSource CreateTaskCompletionSource()
+        {
+            var source = new TaskCompletionSource();
+
+            if (!Debugger.IsAttached)
+            {
+                _ = new CancellationTokenSource(TestTimeout).Token.Register(() => _ = source.TrySetException(new Exception("The test timed out.")));
+            }
+
+            return source;
         }
 
         static string GetTestName()
@@ -248,39 +239,20 @@
 
         protected string InputQueueName;
         protected string ErrorQueueName;
-        protected TransportTestLoggerFactory LogFactory;
+        protected static TransportTestLoggerFactory LogFactory;
+        protected static TimeSpan TestTimeout = TimeSpan.FromSeconds(30);
 
         string testId;
 
-        List<Type> requiredDeliveryConstraints = new List<Type>();
-        SettingsHolder transportSettings = new SettingsHolder();
-        Lazy<IDispatchMessages> lazyDispatcher;
-        TransportReceiveInfrastructure ReceiveInfrastructure;
-        TransportSendInfrastructure SendInfrastructure;
-        TransportInfrastructure TransportInfrastructure;
-        IPushMessages MessagePump;
+        TransportInfrastructure transportInfrastructure;
         CancellationTokenSource testCancellationTokenSource;
-        IConfigureTransportInfrastructure Configurer;
+        IConfigureTransportInfrastructure configurer;
+        IMessageReceiver receiver;
 
         const string DefaultTransportDescriptorKey = "LearningTransport";
         const string TestIdHeaderName = "TransportTest.TestId";
 
         static Lazy<List<Type>> transportDefinitions = new Lazy<List<Type>>(() => TypeScanner.GetAllTypesAssignableTo<TransportDefinition>().ToList());
-
-        class FakeCriticalError : CriticalError
-        {
-            public FakeCriticalError(Action<string, Exception> errorAction) : base(null)
-            {
-                this.errorAction = errorAction ?? ((s, e) => { });
-            }
-
-            public override void Raise(string errorMessage, Exception exception)
-            {
-                errorAction(errorMessage, exception);
-            }
-
-            Action<string, Exception> errorAction;
-        }
 
         class EnvironmentHelper
         {

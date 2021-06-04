@@ -8,7 +8,7 @@ namespace NServiceBus
     /// <summary>
     /// Configuration settings for recoverability.
     /// </summary>
-    public partial class RecoverabilitySettings : ExposeSettings
+    public class RecoverabilitySettings : ExposeSettings
     {
         internal RecoverabilitySettings(SettingsHolder settings) : base(settings)
         {
@@ -61,7 +61,7 @@ namespace NServiceBus
         /// Adds the specified exception type to be treated as an unrecoverable exception.
         /// </summary>
         /// <typeparam name="T">The exception type.</typeparam>
-        public RecoverabilitySettings AddUnrecoverableException<T>() where T: Exception
+        public RecoverabilitySettings AddUnrecoverableException<T>() where T : Exception
         {
             Settings.AddUnrecoverableException(typeof(T));
             return this;

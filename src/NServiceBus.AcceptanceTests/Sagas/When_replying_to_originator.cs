@@ -4,7 +4,6 @@ namespace NServiceBus.AcceptanceTests.Sagas
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_replying_to_originator : NServiceBusAcceptanceTest
@@ -29,14 +28,17 @@ namespace NServiceBus.AcceptanceTests.Sagas
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class RequestResponseRequestingSaga2 : Saga<RequestResponseRequestingSaga2.RequestResponseRequestingSagaData2>,
                 IAmStartedByMessages<InitiateRequestingSaga>,
                 IHandleMessages<ResponseFromOtherSaga>
             {
-                public Context TestContext { get; set; }
+                public RequestResponseRequestingSaga2(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(InitiateRequestingSaga message, IMessageHandlerContext context)
                 {
@@ -48,7 +50,7 @@ namespace NServiceBus.AcceptanceTests.Sagas
 
                 public Task Handle(ResponseFromOtherSaga message, IMessageHandlerContext context)
                 {
-                    TestContext.DidRequestingSagaGetTheResponse = true;
+                    testContext.DidRequestingSagaGetTheResponse = true;
 
                     MarkAsComplete();
 
@@ -65,14 +67,14 @@ namespace NServiceBus.AcceptanceTests.Sagas
                 {
                     public virtual Guid CorrIdForResponse { get; set; }
                 }
+
+                Context testContext;
             }
 
             public class RequestResponseRespondingSaga2 : Saga<RequestResponseRespondingSaga2.RequestResponseRespondingSagaData2>,
                 IAmStartedByMessages<RequestToRespondingSaga>,
                 IHandleMessages<SendReplyFromNonInitiatingHandler>
             {
-                public Context TestContext { get; set; }
-
                 public Task Handle(RequestToRespondingSaga message, IMessageHandlerContext context)
                 {
                     return context.SendLocal(new SendReplyFromNonInitiatingHandler
@@ -84,7 +86,7 @@ namespace NServiceBus.AcceptanceTests.Sagas
                 public Task Handle(SendReplyFromNonInitiatingHandler message, IMessageHandlerContext context)
                 {
                     //reply to originator must be used here since the sender of the incoming message is this saga and not the requesting saga
-                    return ReplyToOriginator(context, new ResponseFromOtherSaga 
+                    return ReplyToOriginator(context, new ResponseFromOtherSaga
                     {
                         SomeCorrelationId = Data.CorrIdForRequest
                     });

@@ -4,7 +4,6 @@ namespace NServiceBus.AcceptanceTests.Sagas
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_replying_to_originator_from_a_timeout : NServiceBusAcceptanceTest
@@ -12,6 +11,8 @@ namespace NServiceBus.AcceptanceTests.Sagas
         [Test]
         public async Task Should_route_the_message_to_the_endpoint_starting_the_saga()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.When(session => session.SendLocal(new InitiateRequestingSaga())))
                 .Done(c => c.DidRequestingSagaGetTheResponse)
@@ -29,26 +30,29 @@ namespace NServiceBus.AcceptanceTests.Sagas
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class RequestResponseRequestingSaga3 : Saga<RequestResponseRequestingSaga3.RequestResponseRequestingSagaData3>,
                 IAmStartedByMessages<InitiateRequestingSaga>,
                 IHandleMessages<ResponseFromOtherSaga>
             {
-                public Context TestContext { get; set; }
+                public RequestResponseRequestingSaga3(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(InitiateRequestingSaga message, IMessageHandlerContext context)
                 {
                     return context.SendLocal(new RequestToRespondingSaga
                     {
-                        SomeIdThatTheResponseSagaCanCorrelateBackToUs = Data.CorrIdForResponse 
+                        SomeIdThatTheResponseSagaCanCorrelateBackToUs = Data.CorrIdForResponse
                     });
                 }
 
                 public Task Handle(ResponseFromOtherSaga message, IMessageHandlerContext context)
                 {
-                    TestContext.DidRequestingSagaGetTheResponse = true;
+                    testContext.DidRequestingSagaGetTheResponse = true;
 
                     MarkAsComplete();
 
@@ -65,14 +69,14 @@ namespace NServiceBus.AcceptanceTests.Sagas
                 {
                     public virtual Guid CorrIdForResponse { get; set; }
                 }
+
+                Context testContext;
             }
 
             public class RequestResponseRespondingSaga3 : Saga<RequestResponseRespondingSaga3.RequestResponseRespondingSagaData3>,
                 IAmStartedByMessages<RequestToRespondingSaga>,
                 IHandleTimeouts<RequestResponseRespondingSaga3.DelayReply>
             {
-                public Context TestContext { get; set; }
-
                 public Task Handle(RequestToRespondingSaga message, IMessageHandlerContext context)
                 {
                     return RequestTimeout<DelayReply>(context, TimeSpan.FromMilliseconds(1));

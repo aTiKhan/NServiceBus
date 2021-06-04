@@ -58,7 +58,10 @@
                 IAmStartedByMessages<StartMessageTwo>,
                 IAmStartedByMessages<StartMessageOne>
             {
-                public Context Context { get; set; }
+                public ConcurrentlyStartedSaga(Context context)
+                {
+                    testContext = context;
+                }
 
                 public async Task Handle(StartMessageOne message, IMessageHandlerContext context)
                 {
@@ -68,7 +71,7 @@
                         SagaId = Data.Id,
                         Type = nameof(StartMessageOne)
                     });
-                    CheckForCompletion(context);
+                    CheckForCompletion();
                 }
 
                 public async Task Handle(StartMessageTwo message, IMessageHandlerContext context)
@@ -79,7 +82,7 @@
                         SagaId = Data.Id,
                         Type = nameof(StartMessageTwo)
                     });
-                    CheckForCompletion(context);
+                    CheckForCompletion();
                 }
 
                 protected override void ConfigureHowToFindSaga(SagaPropertyMapper<ConcurrentlyStartedSagaData> mapper)
@@ -88,15 +91,17 @@
                     mapper.ConfigureMapping<StartMessageTwo>(msg => msg.SomeId).ToSaga(saga => saga.OrderId);
                 }
 
-                void CheckForCompletion(IMessageHandlerContext context)
+                void CheckForCompletion()
                 {
                     if (!Data.Billed || !Data.Placed)
                     {
                         return;
                     }
                     MarkAsComplete();
-                    Context.SagaCompleted = true;
+                    testContext.SagaCompleted = true;
                 }
+
+                Context testContext;
             }
 
             public class ConcurrentlyStartedSagaData : ContainSagaData
@@ -109,17 +114,20 @@
             // Intercepts the messages sent out by the saga
             class LogSuccessfulHandler : IHandleMessages<SuccessfulProcessing>
             {
-                public Context Context { get; set; }
+                public LogSuccessfulHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(SuccessfulProcessing message, IMessageHandlerContext context)
                 {
                     if (message.Type == nameof(StartMessageOne))
                     {
-                        Context.PlacedSagaId = message.SagaId;
+                        testContext.PlacedSagaId = message.SagaId;
                     }
                     else if (message.Type == nameof(StartMessageTwo))
                     {
-                        Context.BilledSagaId = message.SagaId;
+                        testContext.BilledSagaId = message.SagaId;
                     }
                     else
                     {
@@ -128,6 +136,8 @@
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

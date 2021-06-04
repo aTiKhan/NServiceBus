@@ -9,39 +9,28 @@
     /// </summary>
     public class ErrorContext
     {
-        static ReadOnlyContextBag emptyBag = new ContextBag();
-
         /// <summary>
         /// Initializes the error context.
         /// </summary>
         /// <param name="exception">The exception that caused the message processing failure.</param>
         /// <param name="headers">The message headers.</param>
-        /// <param name="transportMessageId">Native message id.</param>
+        /// <param name="nativeMessageId">The native message ID.</param>
         /// <param name="body">The message body.</param>
         /// <param name="transportTransaction">Transaction (along with connection if applicable) used to receive the message.</param>
         /// <param name="immediateProcessingFailures">Number of failed immediate processing attempts.</param>
-        public ErrorContext(Exception exception, Dictionary<string, string> headers, string transportMessageId, byte[] body, TransportTransaction transportTransaction, int immediateProcessingFailures)
-            : this(exception, headers, transportMessageId, body, transportTransaction, immediateProcessingFailures, emptyBag)
+        /// <param name="context">A <see cref="ReadOnlyContextBag" /> which can be used to extend the current object.</param>
+        public ErrorContext(Exception exception, Dictionary<string, string> headers, string nativeMessageId, byte[] body, TransportTransaction transportTransaction, int immediateProcessingFailures, ReadOnlyContextBag context)
         {
-        }
+            Guard.AgainstNull(nameof(exception), exception);
+            Guard.AgainstNull(nameof(transportTransaction), transportTransaction);
+            Guard.AgainstNegative(nameof(immediateProcessingFailures), immediateProcessingFailures);
+            Guard.AgainstNull(nameof(context), context);
 
-        /// <summary>
-        /// Initializes the error context.
-        /// </summary>
-        /// <param name="exception">The exception that caused the message processing failure.</param>
-        /// <param name="headers">The message headers.</param>
-        /// <param name="transportMessageId">Native message id.</param>
-        /// <param name="body">The message body.</param>
-        /// <param name="transportTransaction">Transaction (along with connection if applicable) used to receive the message.</param>
-        /// <param name="immediateProcessingFailures">Number of failed immediate processing attempts.</param>
-        /// <param name="context">A <see cref="ContextBag" /> which can be used to extend the current object.</param>
-        public ErrorContext(Exception exception, Dictionary<string, string> headers, string transportMessageId, byte[] body, TransportTransaction transportTransaction, int immediateProcessingFailures, ReadOnlyContextBag context)
-        {
             Exception = exception;
             TransportTransaction = transportTransaction;
             ImmediateProcessingFailures = immediateProcessingFailures;
 
-            Message = new IncomingMessage(transportMessageId, headers, body);
+            Message = new IncomingMessage(nativeMessageId, headers, body);
 
             DelayedDeliveriesPerformed = Message.GetDelayedDeliveriesPerformed();
             Extensions = context;

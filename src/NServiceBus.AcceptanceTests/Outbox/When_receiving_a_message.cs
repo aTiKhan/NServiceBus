@@ -32,6 +32,7 @@
             {
                 EndpointSetup<DefaultServer>(b =>
                 {
+                    b.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                     b.EnableOutbox();
                 });
             }
@@ -46,13 +47,18 @@
 
             class SendOrderAcknowledgementHandler : IHandleMessages<SendOrderAcknowledgement>
             {
-                public Context Context { get; set; }
+                public SendOrderAcknowledgementHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(SendOrderAcknowledgement message, IMessageHandlerContext context)
                 {
-                    Context.OrderAckReceived++;
+                    testContext.OrderAckReceived++;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

@@ -19,12 +19,10 @@
         public void EnsureNoDocumentationIsEmpty()
         {
             var assembly = typeof(Endpoint).Assembly;
-            var codeBase = assembly.CodeBase;
-            var uri = new UriBuilder(codeBase);
-            var path = Uri.UnescapeDataString(uri.Path);
+            var path = AppContext.BaseDirectory + Path.GetFileName(assembly.Location);
             var assemblyMembers = DocReader.Read(assembly, Path.ChangeExtension(path, "xml"));
 
-            var list = GetListOfMissingDoco(assemblyMembers).ToList();
+            var list = GetListOfMissingDocs(assemblyMembers).ToList();
 
             if (list.Any())
             {
@@ -33,7 +31,7 @@
             }
         }
 
-        static IEnumerable<string> GetListOfMissingDoco(AssemblyMembers assemblyMembers)
+        static IEnumerable<string> GetListOfMissingDocs(AssemblyMembers assemblyMembers)
         {
             var visitor = new VerificationVisitor();
             visitor.VisitAssembly(assemblyMembers);
@@ -116,7 +114,7 @@
                         return;
                     }
                 }
-                if (memberInfos.Count==0)
+                if (memberInfos.Count == 0)
                 {
                     return;
                 }
@@ -130,7 +128,7 @@
                     return;
                 }
                 var declaringType = currentMember.DeclaringType;
-                if (declaringType != null && declaringType.FullName.Contains("JetBrains") || declaringType.FullName.Contains("FastExpressionCompiler"))
+                if (declaringType != null && (declaringType.FullName.Contains("JetBrains") || declaringType.FullName.Contains("FastExpressionCompiler")))
                 {
                     return;
                 }
@@ -140,7 +138,7 @@
             bool IsInheritDoc(Element element)
             {
                 var lineInfoField = GetLineInfoField(element.GetType());
-                var lineInfo = (XElement) lineInfoField?.GetValue(element);
+                var lineInfo = (XElement)lineInfoField?.GetValue(element);
 
                 if (lineInfo != null)
                 {

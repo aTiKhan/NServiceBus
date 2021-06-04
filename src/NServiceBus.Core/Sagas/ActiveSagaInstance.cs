@@ -9,18 +9,18 @@ namespace NServiceBus.Sagas
     /// </summary>
     public class ActiveSagaInstance
     {
-        readonly Func<DateTime> currentUtcDateTimeProvider;
+        readonly Func<DateTimeOffset> currentDateTimeOffsetProvider;
 
         /// <summary>
         /// Creates a new <see cref="ActiveSagaInstance"/> instance.
         /// </summary>
-        public ActiveSagaInstance(Saga saga, SagaMetadata metadata, Func<DateTime> currentUtcDateTimeProvider)
+        public ActiveSagaInstance(Saga saga, SagaMetadata metadata, Func<DateTimeOffset> currentDateTimeOffsetProvider)
         {
-            this.currentUtcDateTimeProvider = currentUtcDateTimeProvider;
+            this.currentDateTimeOffsetProvider = currentDateTimeOffsetProvider;
             Instance = saga;
             Metadata = metadata;
 
-            Created = currentUtcDateTimeProvider();
+            Created = currentDateTimeOffsetProvider();
             Modified = Created;
         }
 
@@ -52,12 +52,12 @@ namespace NServiceBus.Sagas
         /// <summary>
         /// UTC timestamp of when the active saga instance was created.
         /// </summary>
-        public DateTime Created { get; }
+        public DateTimeOffset Created { get; }
 
         /// <summary>
         /// UTC timestamp of when the active saga instance was last modified.
         /// </summary>
-        public DateTime Modified { get; private set; }
+        public DateTimeOffset Modified { get; private set; }
 
 
         internal bool TryGetCorrelationProperty(out CorrelationPropertyInfo sagaCorrelationProperty)
@@ -111,7 +111,7 @@ namespace NServiceBus.Sagas
 
         void UpdateModified()
         {
-            Modified = currentUtcDateTimeProvider();
+            Modified = currentDateTimeOffsetProvider();
         }
 
         internal void MarkAsNotFound()
@@ -151,16 +151,14 @@ namespace NServiceBus.Sagas
 
         void ValidateCorrelationPropertyHaveValue(object currentCorrelationPropertyValue)
         {
-            var defaultValue = GetDefault(correlationProperty.PropertyInfo.PropertyType);
-
-            if (!currentCorrelationPropertyValue.Equals(defaultValue))
+            if (currentCorrelationPropertyValue != null)
             {
                 return;
             }
 
             throw new Exception(
                 $@"The correlated property '{correlationProperty.PropertyInfo.Name}' on saga '{Metadata.SagaType.Name}' does not have a value.
-A correlated property must have a non default (i.e. non null and non-empty) value assigned when a new saga instance is created.");
+A correlated property must have a non-null value assigned when a new saga instance is created.");
         }
 
         void ValidateCorrelationPropertyNotModified(object currentCorrelationPropertyValue)

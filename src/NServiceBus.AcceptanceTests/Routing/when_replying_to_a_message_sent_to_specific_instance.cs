@@ -36,8 +36,7 @@
             {
                 EndpointSetup<DefaultServer>((c, r) =>
                 {
-                    var routing = c.ConfigureTransport().Routing();
-                    routing.RouteToEndpoint(typeof(MyRequest), ReceiverEndpoint);
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MyRequest), ReceiverEndpoint);
                     c.GetSettings().GetOrCreate<EndpointInstances>()
                         .AddOrReplaceInstances("testing", new List<EndpointInstance>
                         {
@@ -48,13 +47,18 @@
 
             public class MyResponseHandler : IHandleMessages<MyResponse>
             {
-                public Context Context { get; set; }
+                public MyResponseHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyResponse message, IMessageHandlerContext context)
                 {
-                    Context.ReplyToAddress = context.MessageHeaders[Headers.ReplyToAddress];
+                    testContext.ReplyToAddress = context.MessageHeaders[Headers.ReplyToAddress];
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

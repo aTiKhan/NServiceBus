@@ -1,8 +1,8 @@
-﻿// ReSharper disable PartialTypeWithSinglePart
-namespace NServiceBus.Testing
+﻿namespace NServiceBus.Testing
 {
     using System;
     using System.Collections.Generic;
+    using Microsoft.Extensions.DependencyInjection;
     using ObjectBuilder;
     using Pipeline;
 
@@ -12,12 +12,27 @@ namespace NServiceBus.Testing
     public partial class TestableOutgoingContext : TestablePipelineContext, IOutgoingContext
     {
         /// <summary>
-        /// A fake <see cref="IBuilder" /> implementation. If you want to provide your own <see cref="IBuilder" /> implementation
+        /// A fake <see cref="IServiceProvider" /> implementation. If you want to provide your own <see cref="IBuilder" /> implementation
         /// override <see cref="GetBuilder" />.
         /// </summary>
-        public FakeBuilder Builder { get; set; } = new FakeBuilder();
+        public IServiceCollection Services { get; set; } = new ServiceCollection();
 
-        IBuilder IBehaviorContext.Builder => GetBuilder();
+        IServiceProvider IBehaviorContext.Builder => GetBuilder();
+
+        IServiceProvider builder = null;
+
+        /// <summary>
+        /// Selects the builder returned by <see cref="IBehaviorContext.Builder" />. Override this method to provide your custom
+        /// <see cref="IServiceProvider" /> implementation.
+        /// </summary>
+        protected virtual IServiceProvider GetBuilder()
+        {
+            if (builder == null)
+            {
+                builder = Services.BuildServiceProvider();
+            }
+            return builder;
+        }
 
         /// <summary>
         /// The id of the outgoing message.
@@ -28,14 +43,5 @@ namespace NServiceBus.Testing
         /// The headers of the outgoing message.
         /// </summary>
         public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
-        /// Selects the builder returned by <see cref="IBehaviorContext.Builder" />. Override this method to provide your custom
-        /// <see cref="IBuilder" /> implementation.
-        /// </summary>
-        protected virtual IBuilder GetBuilder()
-        {
-            return Builder;
-        }
     }
 }

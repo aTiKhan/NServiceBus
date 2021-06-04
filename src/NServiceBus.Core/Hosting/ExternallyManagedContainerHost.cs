@@ -1,15 +1,15 @@
 namespace NServiceBus
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
-    using ObjectBuilder;
 
     class ExternallyManagedContainerHost : IStartableEndpointWithExternallyManagedContainer
     {
-        public ExternallyManagedContainerHost(EndpointCreator endpointCreator, HostingComponent.Configuration hostingConfiguration)
+        public ExternallyManagedContainerHost(EndpointCreator endpointCreator, HostingComponent hostingComponent)
         {
             this.endpointCreator = endpointCreator;
-            this.hostingConfiguration = hostingConfiguration;
+            this.hostingComponent = hostingComponent;
 
             MessageSession = new Lazy<IMessageSession>(() =>
             {
@@ -20,7 +20,7 @@ namespace NServiceBus
                 return messageSession;
             });
 
-            Builder = new Lazy<IBuilder>(() =>
+            Builder = new Lazy<IServiceProvider>(() =>
             {
                 if (objectBuilder == null)
                 {
@@ -32,30 +32,28 @@ namespace NServiceBus
 
         public Lazy<IMessageSession> MessageSession { get; private set; }
 
-        internal Lazy<IBuilder> Builder { get; private set; }
+        internal Lazy<IServiceProvider> Builder { get; private set; }
 
-        public async Task<IEndpointInstance> Start(IBuilder externalBuilder)
+        public async Task<IEndpointInstance> Start(IServiceProvider externalBuilder, CancellationToken cancellationToken = default)
         {
             objectBuilder = externalBuilder;
 
-            var hostingComponent = HostingComponent.Initialize(hostingConfiguration);
-
             var startableEndpoint = endpointCreator.CreateStartableEndpoint(externalBuilder, hostingComponent);
 
-            hostingComponent.RegisterBuilder(externalBuilder, false);
+            hostingComponent.RegisterBuilder(externalBuilder);
 
-            await hostingComponent.RunInstallers().ConfigureAwait(false);
+            await hostingComponent.RunInstallers(cancellationToken).ConfigureAwait(false);
 
-            var endpointInstance = await hostingComponent.Start(startableEndpoint).ConfigureAwait(false);
+            var endpointInstance = await hostingComponent.Start(startableEndpoint, cancellationToken).ConfigureAwait(false);
 
             messageSession = endpointInstance;
 
             return endpointInstance;
         }
 
-        HostingComponent.Configuration hostingConfiguration;
+        HostingComponent hostingComponent;
         EndpointCreator endpointCreator;
         IMessageSession messageSession;
-        IBuilder objectBuilder;
+        IServiceProvider objectBuilder;
     }
 }

@@ -27,7 +27,7 @@
             Assert.True(context.MessageAudited);
         }
 
-       class Context : ScenarioContext
+        class Context : ScenarioContext
         {
             public bool MessageAudited { get; set; }
         }
@@ -39,6 +39,7 @@
                 EndpointSetup<DefaultServer>(
                     b =>
                     {
+                        b.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                         b.EnableOutbox();
                         b.Pipeline.Register("BlowUpAfterDispatchBehavior", new BlowUpAfterDispatchBehavior(), "For testing");
                         b.AuditProcessedMessagesTo<AuditSpyEndpoint>();
@@ -49,7 +50,7 @@
             {
                 public async Task Invoke(IBatchDispatchContext context, Func<IBatchDispatchContext, Task> next)
                 {
-                    if (!context.Operations.Any(op => op.Message.Headers[Headers.EnclosedMessageTypes].Contains(typeof(MessageToBeAudited).Name)))
+                    if (!context.Operations.Any(op => op.Message.Headers[Headers.EnclosedMessageTypes].Contains(nameof(When_a_message_is_audited.MessageToBeAudited))))
                     {
                         await next(context).ConfigureAwait(false);
                         return;
@@ -79,13 +80,18 @@
 
             public class MessageToBeAuditedHandler : IHandleMessages<MessageToBeAudited>
             {
-                public Context Context { get; set; }
+                public MessageToBeAuditedHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToBeAudited message, IMessageHandlerContext context)
                 {
-                    Context.MessageAudited = true;
+                    testContext.MessageAudited = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

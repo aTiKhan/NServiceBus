@@ -9,11 +9,11 @@
     using System.Text;
     using System.Threading.Tasks;
     using Extensibility;
+    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.Pipeline;
     using NUnit.Framework;
     using Particular.Approvals;
     using Testing;
-    using FakeBuilder = Testing.FakeBuilder;
 
     [TestFixture]
     public class PipelineTests
@@ -31,7 +31,7 @@
             pipelineModifications.Additions.Add(new Stage2.Registration(stringWriter));
             pipelineModifications.Additions.Add(new Terminator.Registration(stringWriter));
 
-            var pipeline = new Pipeline<ITransportReceiveContext>(new FakeBuilder(), pipelineModifications);
+            var pipeline = new Pipeline<ITransportReceiveContext>(new ServiceCollection().BuildServiceProvider(), pipelineModifications);
 
             var context = new TestableTransportReceiveContext();
             context.Extensions.Set<IPipelineCache>(new FakePipelineCache());
@@ -54,7 +54,7 @@
             pipelineModifications.Additions.Add(new Stage2.Registration(stringWriter));
             pipelineModifications.Additions.Add(new Terminator.Registration(stringWriter));
 
-            var pipeline = new Pipeline<ITransportReceiveContext>(new FakeBuilder(), pipelineModifications);
+            var pipeline = new Pipeline<ITransportReceiveContext>(new ServiceCollection().BuildServiceProvider(), pipelineModifications);
 
             stringWriter.WriteLine("Run 1");
 
@@ -93,7 +93,15 @@
             var expressions = new List<Expression>();
             behaviors.CreatePipelineExecutionExpression(expressions);
 
-            Approver.Verify(expressions.PrettyPrint());
+#if NET5_0_OR_GREATER
+            // System.Threading.Tasks.Task has changed to System.Threading.Tasks.Task`1[System.Threading.Tasks.VoidTaskResult] in .net5
+            // This ifdef is to make sure the new type is only validated for .net5 or greater.
+            var scenario = "net5";
+#else
+            var scenario = string.Empty;
+#endif
+
+            Approver.Verify(expressions.PrettyPrint(), scenario: scenario);
         }
 
         [Test]
@@ -107,7 +115,7 @@
             pipelineModifications.Additions.Add(new Behavior2.Registration(stringWriter));
             pipelineModifications.Additions.Add(new StageFork.Registration(stringWriter));
 
-            var pipeline = new Pipeline<ITransportReceiveContext>(new FakeBuilder(), pipelineModifications);
+            var pipeline = new Pipeline<ITransportReceiveContext>(new ServiceCollection().BuildServiceProvider(), pipelineModifications);
 
             var context = new TestableTransportReceiveContext();
             context.Extensions.Set<IPipelineCache>(new FakePipelineCache());
@@ -290,7 +298,7 @@
             protected override Task Terminate(IDispatchContext context)
             {
                 context.PrintInstanceWithRunSpecificIfPossible(instance, writer);
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             readonly string instance;
@@ -309,7 +317,6 @@
         {
             public IPipeline<TContext> Pipeline<TContext>()
                 where TContext : IBehaviorContext
-
             {
                 return (IPipeline<TContext>)new FakeBatchPipeline();
             }
@@ -319,7 +326,7 @@
         {
             public Task Invoke(IBatchDispatchContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
     }

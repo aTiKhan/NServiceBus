@@ -3,10 +3,7 @@ namespace NServiceBus
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using DelayedDelivery;
-    using DeliveryConstraints;
     using Outbox;
-    using Performance.TimeToBeReceived;
     using Pipeline;
     using Routing;
     using Transport;
@@ -24,23 +21,23 @@ namespace NServiceBus
             var messageId = context.Message.MessageId;
             var physicalMessageContext = this.CreateIncomingPhysicalMessageContext(context.Message, context);
 
-            var deduplicationEntry = await outboxStorage.Get(messageId, context.Extensions).ConfigureAwait(false);
+            var deduplicationEntry = await outboxStorage.Get(messageId, context.Extensions, context.CancellationToken).ConfigureAwait(false);
             var pendingTransportOperations = new PendingTransportOperations();
 
             if (deduplicationEntry == null)
             {
                 physicalMessageContext.Extensions.Set(pendingTransportOperations);
 
-                using (var outboxTransaction = await outboxStorage.BeginTransaction(context.Extensions).ConfigureAwait(false))
+                using (var outboxTransaction = await outboxStorage.BeginTransaction(context.Extensions, context.CancellationToken).ConfigureAwait(false))
                 {
                     context.Extensions.Set(outboxTransaction);
                     await next(physicalMessageContext).ConfigureAwait(false);
 
                     var outboxMessage = new OutboxMessage(messageId, ConvertToOutboxOperations(pendingTransportOperations.Operations));
-                    await outboxStorage.Store(outboxMessage, outboxTransaction, context.Extensions).ConfigureAwait(false);
+                    await outboxStorage.Store(outboxMessage, outboxTransaction, context.Extensions, context.CancellationToken).ConfigureAwait(false);
 
                     context.Extensions.Remove<OutboxTransaction>();
-                    await outboxTransaction.Commit().ConfigureAwait(false);
+                    await outboxTransaction.Commit(context.CancellationToken).ConfigureAwait(false);
                 }
 
                 physicalMessageContext.Extensions.Remove<PendingTransportOperations>();
@@ -57,7 +54,7 @@ namespace NServiceBus
                 await this.Fork(batchDispatchContext).ConfigureAwait(false);
             }
 
-            await outboxStorage.SetAsDispatched(messageId, context.Extensions).ConfigureAwait(false);
+            await outboxStorage.SetAsDispatched(messageId, context.Extensions, context.CancellationToken).ConfigureAwait(false);
         }
 
         static void ConvertToPendingOperations(OutboxMessage deduplicationEntry, PendingTransportOperations pendingTransportOperations)
@@ -70,8 +67,9 @@ namespace NServiceBus
                     new Transport.TransportOperation(
                         message,
                         DeserializeRoutingStrategy(operation.Options),
-                        DispatchConsistency.Isolated,
-                        DeserializeConstraints(operation.Options)));
+                        operation.Options,
+                        DispatchConsistency.Isolated
+                        ));
             }
         }
 
@@ -81,16 +79,9 @@ namespace NServiceBus
             var index = 0;
             foreach (var operation in operations)
             {
-                var options = new Dictionary<string, string>();
+                SerializeRoutingStrategy(operation.AddressTag, operation.Properties);
 
-                foreach (var constraint in operation.DeliveryConstraints)
-                {
-                    SerializeDeliveryConstraint(constraint, options);
-                }
-
-                SerializeRoutingStrategy(operation.AddressTag, options);
-
-                transportOperations[index] = new TransportOperation(operation.Message.MessageId, options, operation.Message.Body, operation.Message.Headers);
+                transportOperations[index] = new TransportOperation(operation.Message.MessageId, operation.Properties, operation.Message.Body, operation.Message.Headers);
                 index++;
             }
             return transportOperations;
@@ -113,68 +104,17 @@ namespace NServiceBus
             throw new Exception($"Unknown routing strategy {addressTag.GetType().FullName}");
         }
 
-        static void SerializeDeliveryConstraint(DeliveryConstraint constraint, Dictionary<string, string> options)
-        {
-            if (constraint is NonDurableDelivery)
-            {
-                options["NonDurable"] = true.ToString();
-                return;
-            }
-            if (constraint is DoNotDeliverBefore doNotDeliverBefore)
-            {
-                options["DeliverAt"] = DateTimeExtensions.ToWireFormattedString(doNotDeliverBefore.At);
-                return;
-            }
-
-            if (constraint is DelayDeliveryWith delayDeliveryWith)
-            {
-                options["DelayDeliveryFor"] = delayDeliveryWith.Delay.ToString();
-                return;
-            }
-
-            if (constraint is DiscardIfNotReceivedBefore discard)
-            {
-                options["TimeToBeReceived"] = discard.MaxTime.ToString();
-                return;
-            }
-
-            throw new Exception($"Unknown delivery constraint {constraint.GetType().FullName}");
-        }
-
-        static List<DeliveryConstraint> DeserializeConstraints(Dictionary<string, string> options)
-        {
-            var constraints = new List<DeliveryConstraint>(4);
-            if (options.ContainsKey("NonDurable"))
-            {
-                constraints.Add(new NonDurableDelivery());
-            }
-
-            if (options.TryGetValue("DeliverAt", out var deliverAt))
-            {
-                constraints.Add(new DoNotDeliverBefore(DateTimeExtensions.ToUtcDateTime(deliverAt)));
-            }
-
-            if (options.TryGetValue("DelayDeliveryFor", out var delay))
-            {
-                constraints.Add(new DelayDeliveryWith(TimeSpan.Parse(delay)));
-            }
-
-            if (options.TryGetValue("TimeToBeReceived", out var ttbr))
-            {
-                constraints.Add(new DiscardIfNotReceivedBefore(TimeSpan.Parse(ttbr)));
-            }
-            return constraints;
-        }
-
         static AddressTag DeserializeRoutingStrategy(Dictionary<string, string> options)
         {
             if (options.TryGetValue("Destination", out var destination))
             {
+                options.Remove("Destination");
                 return new UnicastAddressTag(destination);
             }
 
             if (options.TryGetValue("EventType", out var eventType))
             {
+                options.Remove("EventType");
                 return new MulticastAddressTag(Type.GetType(eventType, true));
             }
 

@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NServiceBus.Sagas;
     using NUnit.Framework;
 
@@ -13,6 +12,8 @@
         [Test]
         public async Task Should_not_fire_notfound_for_tm()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.When(session => session.SendLocal(new StartSaga
                 {
@@ -34,7 +35,7 @@
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class TimeoutHitsNotFoundSaga : Saga<TimeoutHitsNotFoundSaga.TimeoutHitsNotFoundSagaData>,
@@ -43,7 +44,10 @@
                 IHandleTimeouts<TimeoutHitsNotFoundSaga.MyTimeout>,
                 IHandleMessages<SomeOtherMessage>
             {
-                public Context TestContext { get; set; }
+                public TimeoutHitsNotFoundSaga(Context context)
+                {
+                    testContext = context;
+                }
 
                 public async Task Handle(StartSaga message, IMessageHandlerContext context)
                 {
@@ -68,12 +72,12 @@
                 {
                     if (message is SomeOtherMessage)
                     {
-                        TestContext.NotFoundHandlerCalledForRegularMessage = true;
+                        testContext.NotFoundHandlerCalledForRegularMessage = true;
                     }
 
                     if (message is MyTimeout)
                     {
-                        TestContext.NotFoundHandlerCalledForTimeout = true;
+                        testContext.NotFoundHandlerCalledForTimeout = true;
                     }
                     return Task.FromResult(0);
                 }
@@ -97,6 +101,8 @@
                 public class MyTimeout
                 {
                 }
+
+                Context testContext;
             }
         }
 

@@ -3,12 +3,9 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using DelayedDelivery;
-    using DeliveryConstraints;
     using Faults;
     using Hosting;
-    using Logging;
-    using ObjectBuilder;
+    using Microsoft.Extensions.DependencyInjection;
     using Settings;
     using Support;
     using Transport;
@@ -28,7 +25,7 @@
             settings.AddUnrecoverableException(typeof(MessageDeserializationException));
         }
 
-        public RecoverabilityExecutorFactory GetRecoverabilityExecutorFactory(IBuilder builder)
+        public RecoverabilityExecutorFactory GetRecoverabilityExecutorFactory(IServiceProvider builder)
         {
             if (recoverabilityExecutorFactory == null)
             {
@@ -47,15 +44,16 @@
             }
 
             hostInformation = hostingConfiguration.HostInformation;
+            this.transportSeam = transportSeam;
 
-            transactionsOn = receiveConfiguration.TransactionMode != TransportTransactionMode.None;
+            transactionsOn = transportSeam.TransportDefinition.TransportTransactionMode != TransportTransactionMode.None;
 
             var errorQueue = settings.ErrorQueueAddress();
             transportSeam.QueueBindings.BindSending(errorQueue);
 
-            var delayedRetryConfig = GetDelayedRetryConfig();
-
             var immediateRetryConfig = GetImmediateRetryConfig();
+
+            var delayedRetryConfig = GetDelayedRetryConfig();
 
             var failedConfig = new FailedConfig(errorQueue, settings.UnrecoverableExceptions());
 
@@ -69,15 +67,11 @@
                 recoverabilityConfig.Failed.ErrorQueue,
                 UnrecoverableExceptions = recoverabilityConfig.Failed.UnrecoverableExceptionTypes.Select(t => t.FullName).ToArray()
             });
-
-            WireUpLegacyNotifications();
         }
 
-        RecoverabilityExecutorFactory CreateRecoverabilityExecutorFactory(IBuilder builder)
+        RecoverabilityExecutorFactory CreateRecoverabilityExecutorFactory(IServiceProvider builder)
         {
-            var delayedRetriesAvailable = transactionsOn
-                                          && (settings.DoesTransportSupportConstraint<DelayedDeliveryConstraint>() || settings.Get<TimeoutManagerAddressConfiguration>().TransportAddress != null);
-
+            var delayedRetriesAvailable = transactionsOn && transportSeam.TransportDefinition.SupportsDelayedDelivery;
             var immediateRetriesAvailable = transactionsOn;
 
             Func<string, MoveToErrorsExecutor> moveToErrorsExecutorFactory = localAddress =>
@@ -93,19 +87,14 @@
 
                 var headerCustomizations = settings.Get<Action<Dictionary<string, string>>>(FaultHeaderCustomization);
 
-                return new MoveToErrorsExecutor(builder.Build<IDispatchMessages>(), staticFaultMetadata, headerCustomizations);
+                return new MoveToErrorsExecutor(builder.GetRequiredService<IMessageDispatcher>(), staticFaultMetadata, headerCustomizations);
             };
 
             Func<string, DelayedRetryExecutor> delayedRetryExecutorFactory = localAddress =>
             {
                 if (delayedRetriesAvailable)
                 {
-                    return new DelayedRetryExecutor(
-                        localAddress,
-                        builder.Build<IDispatchMessages>(),
-                        settings.DoesTransportSupportConstraint<DelayedDeliveryConstraint>()
-                            ? null
-                            : settings.Get<TimeoutManagerAddressConfiguration>().TransportAddress);
+                    return new DelayedRetryExecutor(localAddress, builder.GetRequiredService<IMessageDispatcher>());
                 }
 
                 return null;
@@ -129,57 +118,35 @@
 
         ImmediateConfig GetImmediateRetryConfig()
         {
-            if (!transactionsOn)
-            {
-                Logger.Warn("Immediate Retries will be disabled. Immediate Retries are not supported when running with TransportTransactionMode.None. Failed messages will be moved to the error queue instead.");
-                //Transactions must be enabled since Immediate Retries requires the transport to be able to rollback
-                return new ImmediateConfig(0);
-            }
-
             var maxImmediateRetries = settings.Get<int>(NumberOfImmediateRetries);
+
+            if (!transactionsOn && maxImmediateRetries > 0)
+            {
+                throw new Exception("Immediate retries are not supported when running with TransportTransactionMode.None.");
+            }
 
             return new ImmediateConfig(maxImmediateRetries);
         }
 
         DelayedConfig GetDelayedRetryConfig()
         {
-            if (!transactionsOn)
-            {
-                Logger.Warn("Delayed Retries will be disabled. Delayed retries are not supported when running with TransportTransactionMode.None. Failed messages will be moved to the error queue instead.");
-                //Transactions must be enabled since Delayed Retries requires the transport to be able to rollback
-                return new DelayedConfig(0, TimeSpan.Zero);
-            }
-
             var numberOfRetries = settings.Get<int>(NumberOfDelayedRetries);
             var timeIncrease = settings.Get<TimeSpan>(DelayedRetriesTimeIncrease);
 
+            if (numberOfRetries > 0)
+            {
+                if (!transportSeam.TransportDefinition.SupportsDelayedDelivery)
+                {
+                    throw new Exception("Delayed retries are not supported when the transport does not support delayed delivery. Disable delayed retries using 'endpointConfiguration.Recoverability().Delayed(settings => settings.NumberOfRetries(0))'.");
+                }
+
+                if (!transactionsOn)
+                {
+                    throw new Exception("Delayed retries are not supported when running with TransportTransactionMode.None. Disable delayed retries using 'endpointConfiguration.Recoverability().Delayed(settings => settings.NumberOfRetries(0))' or select a different TransportTransactionMode.");
+                }
+            }
+
             return new DelayedConfig(numberOfRetries, timeIncrease);
-        }
-
-        //note: will soon be removed since we're deprecating Notifications in favor of the new notifications
-        void WireUpLegacyNotifications()
-        {
-            var legacyNotifications = settings.Get<Notifications>();
-
-            MessageRetryNotification.Subscribe(e =>
-            {
-                if (e.IsImmediateRetry)
-                {
-                    legacyNotifications.Errors.InvokeMessageHasFailedAnImmediateRetryAttempt(e.Attempt, e.Message, e.Exception);
-                }
-                else
-                {
-                    legacyNotifications.Errors.InvokeMessageHasBeenSentToDelayedRetries(e.Attempt, e.Message, e.Exception);
-                }
-
-                return TaskEx.CompletedTask;
-            });
-
-            MessageFaultedNotification.Subscribe(e =>
-            {
-                legacyNotifications.Errors.InvokeMessageHasBeenSentToErrorQueue(e.Message, e.Exception, e.ErrorQueue);
-                return TaskEx.CompletedTask;
-            });
         }
 
         public Notification<MessageToBeRetried> MessageRetryNotification;
@@ -200,7 +167,7 @@
 
         static int DefaultNumberOfRetries = 3;
         static TimeSpan DefaultTimeIncrease = TimeSpan.FromSeconds(10);
-        static ILog Logger = LogManager.GetLogger<RecoverabilityComponent>();
+        TransportSeam transportSeam;
 
         public class Configuration
         {

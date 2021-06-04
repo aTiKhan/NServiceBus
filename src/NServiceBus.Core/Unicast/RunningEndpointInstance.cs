@@ -9,7 +9,7 @@ namespace NServiceBus
 
     class RunningEndpointInstance : IEndpointInstance
     {
-        public RunningEndpointInstance(SettingsHolder settings, HostingComponent hostingComponent, ReceiveComponent receiveComponent, FeatureComponent featureComponent, IMessageSession messageSession, TransportInfrastructure transportInfrastructure)
+        public RunningEndpointInstance(SettingsHolder settings, HostingComponent hostingComponent, ReceiveComponent receiveComponent, FeatureComponent featureComponent, IMessageSession messageSession, TransportInfrastructure transportInfrastructure, CancellationTokenSource stoppingTokenSource)
         {
             this.settings = settings;
             this.hostingComponent = hostingComponent;
@@ -17,76 +17,123 @@ namespace NServiceBus
             this.featureComponent = featureComponent;
             this.messageSession = messageSession;
             this.transportInfrastructure = transportInfrastructure;
+            this.stoppingTokenSource = stoppingTokenSource;
         }
 
-        public async Task Stop()
+        public async Task Stop(CancellationToken cancellationToken = default)
         {
-            if (stopped)
+            if (status == Status.Stopped)
             {
                 return;
             }
 
+            cancellationToken.Register(() => Log.Info("Aborting graceful shutdown."));
+
+            stoppingTokenSource.Cancel();
+
             try
             {
-                await stopSemaphore.WaitAsync().ConfigureAwait(false);
+                // Ensures to only continue if all parallel invocations can rely on the endpoint instance to be fully stopped.
+                await stopSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                if (stopped)
+                if (status >= Status.Stopping) // Another invocation is already handling Stop
                 {
                     return;
                 }
 
-                Log.Info("Initiating shutdown.");
+                status = Status.Stopping;
 
-                // Cannot throw by design
-                await receiveComponent.Stop().ConfigureAwait(false);
-                await featureComponent.Stop().ConfigureAwait(false);
-                // Can throw
-                await transportInfrastructure.Stop().ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                Log.Warn("Exception occurred during shutdown of the transport.", exception);
+                try
+                {
+                    Log.Info("Initiating shutdown.");
+
+                    // Cannot throw by design
+                    await receiveComponent.Stop(cancellationToken).ConfigureAwait(false);
+                    await featureComponent.Stop(cancellationToken).ConfigureAwait(false);
+
+                    // Can throw
+                    await transportInfrastructure.Shutdown(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
+                {
+                    Log.Error("Shutdown of the transport infrastructure failed.", ex);
+
+                    // TODO: Not throwing because reason unknown :)
+                }
+                finally
+                {
+                    settings.Clear();
+                    hostingComponent.Stop();
+                    status = Status.Stopped;
+                    Log.Info("Shutdown complete.");
+                }
             }
             finally
             {
-                settings.Clear();
-                await hostingComponent.Stop().ConfigureAwait(false);
-
-                stopped = true;
-                Log.Info("Shutdown complete.");
-
                 stopSemaphore.Release();
             }
         }
 
-        public Task Send(object message, SendOptions options)
+        public Task Send(object message, SendOptions sendOptions, CancellationToken cancellationToken = default)
         {
-            return messageSession.Send(message, options);
+            Guard.AgainstNull(nameof(message), message);
+            Guard.AgainstNull(nameof(sendOptions), sendOptions);
+
+            GuardAgainstUseWhenNotStarted();
+            return messageSession.Send(message, sendOptions, cancellationToken);
         }
 
-        public Task Send<T>(Action<T> messageConstructor, SendOptions options)
+        public Task Send<T>(Action<T> messageConstructor, SendOptions sendOptions, CancellationToken cancellationToken = default)
         {
-            return messageSession.Send(messageConstructor, options);
+            Guard.AgainstNull(nameof(messageConstructor), messageConstructor);
+            Guard.AgainstNull(nameof(sendOptions), sendOptions);
+
+            GuardAgainstUseWhenNotStarted();
+            return messageSession.Send(messageConstructor, sendOptions, cancellationToken);
         }
 
-        public Task Publish(object message, PublishOptions options)
+        public Task Publish(object message, PublishOptions publishOptions, CancellationToken cancellationToken = default)
         {
-            return messageSession.Publish(message, options);
+            Guard.AgainstNull(nameof(message), message);
+            Guard.AgainstNull(nameof(publishOptions), publishOptions);
+
+            GuardAgainstUseWhenNotStarted();
+            return messageSession.Publish(message, publishOptions, cancellationToken);
         }
 
-        public Task Publish<T>(Action<T> messageConstructor, PublishOptions publishOptions)
+        public Task Publish<T>(Action<T> messageConstructor, PublishOptions publishOptions, CancellationToken cancellationToken = default)
         {
-            return messageSession.Publish(messageConstructor, publishOptions);
+            Guard.AgainstNull(nameof(messageConstructor), messageConstructor);
+            Guard.AgainstNull(nameof(publishOptions), publishOptions);
+
+            GuardAgainstUseWhenNotStarted();
+            return messageSession.Publish(messageConstructor, publishOptions, cancellationToken);
         }
 
-        public Task Subscribe(Type eventType, SubscribeOptions options)
+        public Task Subscribe(Type eventType, SubscribeOptions subscribeOptions, CancellationToken cancellationToken = default)
         {
-            return messageSession.Subscribe(eventType, options);
+            Guard.AgainstNull(nameof(eventType), eventType);
+            Guard.AgainstNull(nameof(subscribeOptions), subscribeOptions);
+
+            GuardAgainstUseWhenNotStarted();
+            return messageSession.Subscribe(eventType, subscribeOptions, cancellationToken);
         }
 
-        public Task Unsubscribe(Type eventType, UnsubscribeOptions options)
+        public Task Unsubscribe(Type eventType, UnsubscribeOptions unsubscribeOptions, CancellationToken cancellationToken = default)
         {
-            return messageSession.Unsubscribe(eventType, options);
+            Guard.AgainstNull(nameof(eventType), eventType);
+            Guard.AgainstNull(nameof(unsubscribeOptions), unsubscribeOptions);
+
+            GuardAgainstUseWhenNotStarted();
+            return messageSession.Unsubscribe(eventType, unsubscribeOptions, cancellationToken);
+        }
+
+        void GuardAgainstUseWhenNotStarted()
+        {
+            if (status >= Status.Stopping)
+            {
+                throw new InvalidOperationException("Invoking messaging operations on the endpoint instance after it has been triggered to stop is not supported.");
+            }
         }
 
         HostingComponent hostingComponent;
@@ -94,12 +141,19 @@ namespace NServiceBus
         FeatureComponent featureComponent;
         IMessageSession messageSession;
         readonly TransportInfrastructure transportInfrastructure;
-
+        readonly CancellationTokenSource stoppingTokenSource;
         SettingsHolder settings;
 
-        volatile bool stopped;
+        volatile Status status = Status.Running;
         SemaphoreSlim stopSemaphore = new SemaphoreSlim(1);
 
         static ILog Log = LogManager.GetLogger<RunningEndpointInstance>();
+
+        enum Status
+        {
+            Running = 1,
+            Stopping = 2,
+            Stopped = 3
+        }
     }
 }

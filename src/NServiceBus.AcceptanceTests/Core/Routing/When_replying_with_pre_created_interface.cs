@@ -31,30 +31,40 @@
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(c => c.Pipeline.Register("MessageTypeSpy", new MessageTypeSpy((Context)ScenarioContext), "MessageTypeSpy"));
+                EndpointSetup<DefaultServer>((c, r) => c.Pipeline.Register("MessageTypeSpy", new MessageTypeSpy((Context)r.ScenarioContext), "MessageTypeSpy"));
             }
 
             public class StartMessageHandler : IHandleMessages<MyRequest>
             {
-                public IMessageCreator MessageCreator { get; set; }
+                public StartMessageHandler(IMessageCreator messageCreator)
+                {
+                    this.messageCreator = messageCreator;
+                }
 
                 public Task Handle(MyRequest message, IMessageHandlerContext context)
                 {
-                    var interfaceMessage = MessageCreator.CreateInstance<IMyReply>();
+                    var interfaceMessage = messageCreator.CreateInstance<IMyReply>();
                     return context.Reply(interfaceMessage);
                 }
+
+                IMessageCreator messageCreator;
             }
 
             public class IMyMessageHandler : IHandleMessages<IMyReply>
             {
-                public Context Context { get; set; }
+                public IMyMessageHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(IMyReply message, IMessageHandlerContext context)
                 {
-                    Context.GotTheReply = true;
+                    testContext.GotTheReply = true;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
 
             class MessageTypeSpy : IBehavior<IOutgoingLogicalMessageContext, IOutgoingLogicalMessageContext>

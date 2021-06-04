@@ -34,21 +34,25 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.ConfigureTransport()
-                        .Transactions(TransportTransactionMode.TransactionScope);
+                    config.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.TransactionScope;
                 });
             }
 
             public class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyMessage messageThatIsEnlisted, IMessageHandlerContext context)
                 {
-                    Context.CanEnlistPromotable = Transaction.Current.EnlistPromotableSinglePhase(new FakePromotableResourceManager());
-                    Context.HandlerInvoked = true;
+                    testContext.CanEnlistPromotable = Transaction.Current.EnlistPromotableSinglePhase(new FakePromotableResourceManager());
+                    testContext.HandlerInvoked = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

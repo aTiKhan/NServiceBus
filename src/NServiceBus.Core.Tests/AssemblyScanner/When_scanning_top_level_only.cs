@@ -8,7 +8,7 @@ namespace NServiceBus.Core.Tests.AssemblyScanner
     [TestFixture]
     public class When_scanning_top_level_only
     {
-        static string baseDirectoryToScan = Path.Combine(Path.GetTempPath(), "empty");
+        static string baseDirectoryToScan = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "empty");
         static string someSubDirectory = Path.Combine(baseDirectoryToScan, "subDir");
 
         [SetUp]
@@ -25,11 +25,13 @@ namespace NServiceBus.Core.Tests.AssemblyScanner
         public void TearDown()
         {
             if (Directory.Exists(baseDirectoryToScan))
+            {
                 Directory.Delete(baseDirectoryToScan, true);
+            }
         }
 
         [Test]
-        public void should_not_find_assembly_in_sub_directory()
+        public void Should_not_find_assembly_in_sub_directory()
         {
             var results = new AssemblyScanner(baseDirectoryToScan)
             {
@@ -41,7 +43,7 @@ namespace NServiceBus.Core.Tests.AssemblyScanner
             var allEncounteredFileNames =
                 results.Assemblies
                     .Where(x => !x.IsDynamic)
-                    .Select(a => a.CodeBase)
+                    .Select(a => a.Location)
                     .Concat(results.SkippedFiles.Select(s => s.FilePath))
                     .ToList();
 

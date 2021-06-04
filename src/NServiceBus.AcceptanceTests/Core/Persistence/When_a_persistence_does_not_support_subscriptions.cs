@@ -7,7 +7,7 @@ namespace NServiceBus.AcceptanceTests.Core.Persistence
     public class When_a_persistence_does_not_support_subscriptions : NServiceBusAcceptanceTest
     {
         [Test]
-        public void should_throw_exception()
+        public void Should_throw_exception()
         {
             Requires.MessageDrivenPubSub();
 
@@ -25,12 +25,8 @@ namespace NServiceBus.AcceptanceTests.Core.Persistence
             {
                 EndpointSetup<ServerWithNoDefaultPersistenceDefinitions>(c =>
                 {
-                    c.UsePersistence<InMemoryPersistence, StorageType.Sagas>();
-#pragma warning disable 0618
-                    c.UsePersistence<InMemoryPersistence, StorageType.GatewayDeduplication>();
-#pragma warning restore 0618
-                    c.UsePersistence<InMemoryPersistence, StorageType.Outbox>();
-                    c.UsePersistence<InMemoryPersistence, StorageType.Timeouts>();
+                    c.UsePersistence<AcceptanceTestingPersistence, StorageType.Sagas>();
+                    c.UsePersistence<AcceptanceTestingPersistence, StorageType.Outbox>();
                 });
             }
         }

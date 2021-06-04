@@ -1,6 +1,7 @@
 namespace NServiceBus.AcceptanceTests.Core.Sagas
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
@@ -40,27 +41,30 @@ namespace NServiceBus.AcceptanceTests.Core.Sagas
                 EndpointSetup<DefaultServer>(c =>
                 {
                     //use InMemoryPersistence as custom finder support is required
-                    c.UsePersistence<InMemoryPersistence>();
+                    c.UsePersistence<AcceptanceTestingPersistence>();
                     c.Pipeline.Register(new BehaviorWhichAddsThingsToTheContext(), "adds some data to the context");
                 });
             }
 
             class CustomFinder : IFindSagas<TestSaga07.SagaData07>.Using<StartSagaMessage>
             {
-                public Context Context { get; set; }
-
-                public Task<TestSaga07.SagaData07> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public CustomFinder(Context testContext)
                 {
-                    Context.ContextBag = context;
-                    Context.FinderUsed = true;
+                    this.testContext = testContext;
+                }
+
+                public Task<TestSaga07.SagaData07> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
+                {
+                    testContext.ContextBag = context;
+                    testContext.FinderUsed = true;
                     return Task.FromResult(default(TestSaga07.SagaData07));
                 }
+
+                Context testContext;
             }
 
             public class TestSaga07 : Saga<TestSaga07.SagaData07>, IAmStartedByMessages<StartSagaMessage>
             {
-                public Context Context { get; set; }
-
                 public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
                 {
                     return Task.FromResult(0);

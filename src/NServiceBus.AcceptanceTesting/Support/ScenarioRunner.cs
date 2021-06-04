@@ -66,7 +66,6 @@
         {
             using (var cts = new CancellationTokenSource())
             {
-                // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
                 try
                 {
                     await StartEndpoints(runners, cts).ConfigureAwait(false);
@@ -131,7 +130,7 @@
             {
                 await component.Start(token).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex) when (!ex.IsCausedBy(token))
             {
                 cts.Cancel();
                 TestContext.WriteLine($"Endpoint {component.Name} failed to start.");
@@ -153,7 +152,7 @@
             {
                 await component.ComponentsStarted(token).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex) when (!ex.IsCausedBy(token))
             {
                 cts.Cancel();
                 TestContext.WriteLine($"Whens for endpoint {component.Name} failed to execute.");
@@ -220,7 +219,7 @@
 
                 return activeEndpoints;
             }
-            set { activeEndpoints = value.ToList(); }
+            set => activeEndpoints = value.ToList();
         }
 
         IList<string> activeEndpoints;

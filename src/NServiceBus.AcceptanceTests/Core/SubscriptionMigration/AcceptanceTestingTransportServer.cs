@@ -5,7 +5,6 @@
     using AcceptanceTesting.Customization;
     using AcceptanceTesting.Support;
     using EndpointTemplates;
-    using Features;
 
     class AcceptanceTestingTransportServer : IEndpointSetupTemplate
     {
@@ -25,9 +24,6 @@
             configuration.TypesToIncludeInScan(types);
             configuration.EnableInstallers();
 
-            configuration.UseContainer(new AcceptanceTestingContainer());
-            configuration.DisableFeature<TimeoutManager>();
-
             var recoverability = configuration.Recoverability();
             recoverability.Delayed(delayed => delayed.NumberOfRetries(0));
             recoverability.Immediate(immediate => immediate.NumberOfRetries(0));
@@ -39,7 +35,7 @@
 
             configuration.RegisterComponentsAndInheritanceHierarchy(runDescriptor);
 
-            var persistenceConfiguration = new ConfigureEndpointInMemoryPersistence();
+            var persistenceConfiguration = new ConfigureEndpointAcceptanceTestingPersistence();
             await persistenceConfiguration.Configure(endpointConfiguration.EndpointName, configuration, runDescriptor.Settings, endpointConfiguration.PublisherMetadata);
             runDescriptor.OnTestCompleted(_ => persistenceConfiguration.Cleanup());
 

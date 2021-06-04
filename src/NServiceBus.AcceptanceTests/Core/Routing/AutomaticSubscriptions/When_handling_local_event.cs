@@ -42,7 +42,7 @@
                 EndpointSetup<DefaultPublisher>(b =>
                 {
                     // Make sure the subscription message isn't purged on startup
-                    b.PurgeOnStartup(true);
+                    b.PurgeOnStartup(false);
                     b.OnEndpointSubscribed<Context>((s, context) =>
                     {
                         if (s.MessageType == typeof(Event).AssemblyQualifiedName)
@@ -55,18 +55,23 @@
 
             public class EventHandler : IHandleMessages<Event>
             {
-                public Context Context { get; set; }
+                public EventHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(Event @event, IMessageHandlerContext context)
                 {
-                    if (@event.ContextId != Context.Id)
+                    if (@event.ContextId != testContext.Id)
                     {
                         return Task.FromResult(0);
                     }
-                    Context.GotEvent = true;
+                    testContext.GotEvent = true;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

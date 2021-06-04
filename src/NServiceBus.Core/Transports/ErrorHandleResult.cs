@@ -11,7 +11,7 @@
         Handled,
 
         /// <summary>
-        /// Indicates that the infrastructure was did not handle the current error. A retry is required.
+        /// Indicates that the infrastructure did not handle the current error. A retry is required.
         /// </summary>
         RetryRequired
     }

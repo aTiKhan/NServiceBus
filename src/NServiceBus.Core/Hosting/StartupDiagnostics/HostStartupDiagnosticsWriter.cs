@@ -3,34 +3,26 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Logging;
     using SimpleJson;
 
     class HostStartupDiagnosticsWriter
     {
-        public HostStartupDiagnosticsWriter(Func<string, Task> diagnosticsWriter, bool isCustomWriter)
+        public HostStartupDiagnosticsWriter(Func<string, CancellationToken, Task> diagnosticsWriter, bool isCustomWriter)
         {
             this.diagnosticsWriter = diagnosticsWriter;
             this.isCustomWriter = isCustomWriter;
         }
 
-        public async Task Write(List<StartupDiagnosticEntries.StartupDiagnosticEntry> entries)
+        public async Task Write(List<StartupDiagnosticEntries.StartupDiagnosticEntry> entries, CancellationToken cancellationToken = default)
         {
-            var duplicateNames = entries.GroupBy(item => item.Name)
-                .Where(group => group.Count() > 1)
-                .Select(group => group.Key)
-                .ToList();
-
-            if (duplicateNames.Any())
-            {
-                logger.Error("Diagnostics entries contains duplicates. Duplicates: " + string.Join(", ", duplicateNames));
-                return;
-            }
-
-            var dictionary = entries
+            var deduplicatedEntries = DeduplicateEntries(entries);
+            var dictionary = deduplicatedEntries
                 .OrderBy(e => e.Name)
-                .ToDictionary(e => e.Name, e => e.Data);
+                .ToDictionary(e => e.Name, e => e.Data, StringComparer.OrdinalIgnoreCase);
+
             string data;
 
             try
@@ -44,21 +36,48 @@
             }
             try
             {
-                await diagnosticsWriter(data)
+                await diagnosticsWriter(data, cancellationToken)
                     .ConfigureAwait(false);
             }
-            catch (Exception exception)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
                 if (isCustomWriter)
                 {
-                    logger.Error($"Failed to write startup diagnostics using the custom delegate defined by {nameof(DiagnosticSettingsExtensions.CustomDiagnosticsWriter)}", exception);
+                    logger.Error($"Failed to write startup diagnostics using the custom delegate defined by {nameof(DiagnosticSettingsExtensions.CustomDiagnosticsWriter)}", ex);
                     return;
                 }
-                logger.Error("Failed to write startup diagnostics", exception);
+                logger.Error("Failed to write startup diagnostics", ex);
             }
         }
 
-        Func<string, Task> diagnosticsWriter;
+        IEnumerable<StartupDiagnosticEntries.StartupDiagnosticEntry> DeduplicateEntries(List<StartupDiagnosticEntries.StartupDiagnosticEntry> entries)
+        {
+            var countMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entry in entries)
+            {
+                if (!countMap.ContainsKey(entry.Name))
+                {
+                    countMap.Add(entry.Name, 1);
+                    yield return entry;
+                }
+                else
+                {
+                    countMap[entry.Name] += 1;
+                    var entryNewName = $"{entry.Name}-{countMap[entry.Name]}";
+
+                    logger.Warn($"A duplicate diagnostic entry was renamed from {entry.Name} to {entryNewName}.");
+
+                    yield return new StartupDiagnosticEntries.StartupDiagnosticEntry
+                    {
+                        Name = entryNewName,
+                        Data = entry.Data
+                    };
+                }
+            }
+        }
+
+        Func<string, CancellationToken, Task> diagnosticsWriter;
         bool isCustomWriter;
 
         static ILog logger = LogManager.GetLogger<HostStartupDiagnosticsWriter>();

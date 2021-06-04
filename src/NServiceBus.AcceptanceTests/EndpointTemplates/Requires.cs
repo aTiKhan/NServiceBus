@@ -2,7 +2,6 @@
 {
     using NUnit.Framework;
 
-    // ReSharper disable once PartialTypeWithSinglePart
     static partial class Requires
     {
         public static void DtcSupport()
@@ -37,11 +36,11 @@
             }
         }
 
-        public static void TimeoutStorage()
+        public static void DelayedDelivery()
         {
-            if (TestSuiteConstraints.Current.SupportsNativeDeferral)
+            if (!TestSuiteConstraints.Current.SupportsDelayedDelivery)
             {
-                Assert.Ignore("Ignoring this test because it requires the timeout manager but this transport provides native deferral.");
+                Assert.Ignore("Ignoring this test because it requires delayed delivery support from the transport.");
             }
         }
 
@@ -50,6 +49,14 @@
             if (!TestSuiteConstraints.Current.SupportsOutbox)
             {
                 Assert.Ignore("Ignoring this tests because it requires a persistence providing an Outbox storage.");
+            }
+        }
+
+        public static void PurgeOnStartupSupport()
+        {
+            if (!TestSuiteConstraints.Current.SupportsPurgeOnStartup)
+            {
+                Assert.Ignore("Ignoring this tests because it requires a transport able to purge queues at startup.");
             }
         }
     }

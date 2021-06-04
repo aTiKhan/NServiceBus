@@ -1,8 +1,9 @@
-﻿// ReSharper disable PartialTypeWithSinglePart
-namespace NServiceBus.Testing
+﻿namespace NServiceBus.Testing
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Diagnostics.CodeAnalysis;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using MessageInterfaces.MessageMapper.Reflection;
@@ -112,5 +113,8 @@ namespace NServiceBus.Testing
 
         ConcurrentQueue<SentMessage<object>> sentMessages = new ConcurrentQueue<SentMessage<object>>();
         ConcurrentQueue<TimeoutMessage<object>> timeoutMessages = new ConcurrentQueue<TimeoutMessage<object>>();
+
+        [SuppressMessage("Code", "PS0002:Instance methods on types implementing ICancellableContext should not have a CancellationToken parameter", Justification = "Designed for testing.")]
+        public CancellationToken CancellationToken { get; set; }
     }
 }

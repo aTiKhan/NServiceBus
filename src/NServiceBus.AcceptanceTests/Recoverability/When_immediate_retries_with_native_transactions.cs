@@ -42,8 +42,8 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    var scenarioContext = (Context) context.ScenarioContext;
-                    config.Recoverability().Failed(f => f.OnMessageSentToErrorQueue(message =>
+                    var scenarioContext = (Context)context.ScenarioContext;
+                    config.Recoverability().Failed(f => f.OnMessageSentToErrorQueue((message, _) =>
                     {
                         scenarioContext.ForwardedToErrorQueue = true;
                         return Task.FromResult(0);
@@ -51,24 +51,27 @@
 
                     var recoverability = config.Recoverability();
                     recoverability.Immediate(immediate => immediate.NumberOfRetries(numberOfRetries));
-                    recoverability.Delayed(delayed => delayed.NumberOfRetries(0)); //disable the delayed retries
 
-                    config.ConfigureTransport()
-                        .Transactions(TransportTransactionMode.ReceiveOnly);
+                    config.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                 });
             }
 
             class MessageToBeRetriedHandler : IHandleMessages<MessageToBeRetried>
             {
-                public Context TestContext { get; set; }
+                public MessageToBeRetriedHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToBeRetried message, IMessageHandlerContext context)
                 {
-                    TestContext.MessageId = context.MessageId;
-                    TestContext.NumberOfTimesInvoked++;
+                    testContext.MessageId = context.MessageId;
+                    testContext.NumberOfTimesInvoked++;
 
                     throw new SimulatedException();
                 }
+
+                Context testContext;
             }
         }
 

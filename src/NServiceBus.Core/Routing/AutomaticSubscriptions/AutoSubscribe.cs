@@ -3,8 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Logging;
+    using Microsoft.Extensions.DependencyInjection;
     using Unicast;
     using Unicast.Queuing;
 
@@ -33,68 +35,83 @@
 
             context.RegisterStartupTask(b =>
             {
-                var handlerRegistry = b.Build<MessageHandlerRegistry>();
+                var handlerRegistry = b.GetRequiredService<MessageHandlerRegistry>();
                 var messageTypesHandled = GetMessageTypesHandledByThisEndpoint(handlerRegistry, conventions, settings);
-                return new ApplySubscriptions(messageTypesHandled, settings.ExcludedTypes);
+                return new ApplySubscriptions(messageTypesHandled);
             });
         }
 
-        static List<Type> GetMessageTypesHandledByThisEndpoint(MessageHandlerRegistry handlerRegistry, Conventions conventions, SubscribeSettings settings)
+        static Type[] GetMessageTypesHandledByThisEndpoint(MessageHandlerRegistry handlerRegistry, Conventions conventions, SubscribeSettings settings)
         {
             var messageTypesHandled = handlerRegistry.GetMessageTypes() //get all potential messages
                 .Where(t => !conventions.IsInSystemConventionList(t)) //never auto-subscribe system messages
                 .Where(t => !conventions.IsCommandType(t)) //commands should never be subscribed to
                 .Where(t => conventions.IsEventType(t)) //only events unless the user asked for all messages
                 .Where(t => settings.AutoSubscribeSagas || handlerRegistry.GetHandlersFor(t).Any(handler => !typeof(Saga).IsAssignableFrom(handler.HandlerType))) //get messages with other handlers than sagas if needed
-                .ToList();
+                .Except(settings.ExcludedTypes)
+                .ToArray();
 
             return messageTypesHandled;
         }
 
         class ApplySubscriptions : FeatureStartupTask
         {
-            public ApplySubscriptions(List<Type> messagesHandledByThisEndpoint, HashSet<Type> excludedTypes)
+            public ApplySubscriptions(Type[] messagesHandledByThisEndpoint)
             {
                 this.messagesHandledByThisEndpoint = messagesHandledByThisEndpoint;
-                this.excludedTypes = excludedTypes;
             }
 
-            protected override Task OnStart(IMessageSession session)
-            {
-                var tasks = new Task[messagesHandledByThisEndpoint.Count];
-                for (var i = 0; i < messagesHandledByThisEndpoint.Count; i++)
-                {
-                    var eventType = messagesHandledByThisEndpoint[i];
-
-                    tasks[i] = excludedTypes.Contains(eventType)
-                        ? TaskEx.CompletedTask
-                        : SubscribeToEvent(session, eventType);
-                }
-                return Task.WhenAll(tasks);
-            }
-
-            protected override Task OnStop(IMessageSession session)
-            {
-                return TaskEx.CompletedTask;
-            }
-
-            static async Task SubscribeToEvent(IMessageSession session, Type eventType)
+            protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
             {
                 try
                 {
-                    await session.Subscribe(eventType).ConfigureAwait(false);
-                    Logger.DebugFormat("Auto subscribed to event {0}", eventType);
+                    var messageSession = session as MessageSession;
+                    await messageSession.SubscribeAll(messagesHandledByThisEndpoint, new SubscribeOptions(), cancellationToken)
+                        .ConfigureAwait(false);
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.DebugFormat("Auto subscribed to events {0}",
+                            string.Join<Type>(",", messagesHandledByThisEndpoint));
+                    }
                 }
-                catch (Exception e) when (!(e is QueueNotFoundException))
+                catch (AggregateException e)
                 {
-                    Logger.Error($"AutoSubscribe was unable to subscribe to event '{eventType.FullName}': {e.Message}");
+                    foreach (var innerException in e.InnerExceptions)
+                    {
+                        if (innerException is QueueNotFoundException)
+                        {
+                            throw innerException;
+                        }
+
+                        LogFailedSubscription(innerException);
+                    }
+                    //swallow
+                }
+                catch (QueueNotFoundException)
+                {
+                    throw;
+                }
+                // also catch regular exceptions in case a transport does not throw an AggregateException
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
+                {
+                    LogFailedSubscription(ex);
                     // swallow exception
+                }
+
+                void LogFailedSubscription(Exception exception)
+                {
+                    Logger.Error("AutoSubscribe was unable to subscribe to an event:", exception);
                 }
             }
 
-            List<Type> messagesHandledByThisEndpoint;
-            readonly HashSet<Type> excludedTypes;
-            static ILog Logger = LogManager.GetLogger<AutoSubscribe>();
+
+            protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
+            {
+                return Task.CompletedTask;
+            }
+
+            readonly Type[] messagesHandledByThisEndpoint;
+            static readonly ILog Logger = LogManager.GetLogger<AutoSubscribe>();
         }
 
         internal class SubscribeSettings

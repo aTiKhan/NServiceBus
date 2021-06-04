@@ -1,10 +1,12 @@
 namespace NServiceBus
 {
-    using ObjectBuilder;
+    using System;
+    using System.Threading;
 
     class RootContext : BehaviorContext
     {
-        public RootContext(IBuilder builder, MessageOperations messageOperations, IPipelineCache pipelineCache) : base(null)
+        public RootContext(IServiceProvider builder, MessageOperations messageOperations, IPipelineCache pipelineCache, CancellationToken cancellationToken = default)
+            : base(null, cancellationToken)
         {
             Set(messageOperations);
             Set(builder);

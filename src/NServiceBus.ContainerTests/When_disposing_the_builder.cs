@@ -1,38 +1,29 @@
 namespace NServiceBus.ContainerTests
 {
     using System;
-    using System.Diagnostics;
-    using NServiceBus;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
-    [TestFixture]
     public class When_disposing_the_builder
     {
         [Test]
         public void Should_dispose_all_IDisposable_components()
         {
-            var builder = TestContainerBuilder.ConstructBuilder();
+            var serviceCollection = new ServiceCollection();
+
             DisposableComponent.DisposeCalled = false;
             AnotherSingletonComponent.DisposeCalled = false;
 
-            builder.Configure(typeof(DisposableComponent), DependencyLifecycle.SingleInstance);
-            builder.RegisterSingleton(typeof(AnotherSingletonComponent), new AnotherSingletonComponent());
+            serviceCollection.AddSingleton(typeof(DisposableComponent));
+            serviceCollection.AddSingleton(typeof(AnotherSingletonComponent), new AnotherSingletonComponent());
 
-            builder.Build(typeof(DisposableComponent));
-            builder.Build(typeof(AnotherSingletonComponent));
-            builder.Dispose();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            serviceProvider.GetService(typeof(DisposableComponent));
+            serviceProvider.GetService(typeof(AnotherSingletonComponent));
+            (serviceProvider as IDisposable)?.Dispose();
 
             Assert.True(DisposableComponent.DisposeCalled, "Dispose should be called on DisposableComponent");
-            Assert.True(AnotherSingletonComponent.DisposeCalled, "Dispose should be called on AnotherSingletonComponent");
-        }
-
-        [Test]
-        public void When_circular_ref_exists_between_container_and_builder_should_not_infinite_loop()
-        {
-            var builder = TestContainerBuilder.ConstructBuilder();
-            Debug.WriteLine("Trying " + builder.GetType().Name);
-            builder.RegisterSingleton(builder.GetType(), builder);
-            builder.Dispose();
+            Assert.False(AnotherSingletonComponent.DisposeCalled, "Dispose should not be called on AnotherSingletonComponent");
         }
 
         public class DisposableComponent : IDisposable

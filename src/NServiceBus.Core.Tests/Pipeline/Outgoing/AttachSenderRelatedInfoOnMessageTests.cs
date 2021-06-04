@@ -2,28 +2,30 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading.Tasks;
     using NServiceBus.Routing;
     using Transport;
     using NUnit.Framework;
     using Testing;
+    using System.Threading;
 
     [TestFixture]
     public class AttachSenderRelatedInfoOnMessageTests
     {
         [Test]
-        public void Should_set_the_time_sent_header()
+        public async Task Should_set_the_time_sent_headerAsync()
         {
-            var message = InvokeBehavior();
+            var message = await InvokeBehaviorAsync();
 
             Assert.True(message.Headers.ContainsKey(Headers.TimeSent));
         }
 
         [Test]
-        public void Should_not_override_the_time_sent_header()
+        public async Task Should_not_override_the_time_sent_headerAsync()
         {
             var timeSent = DateTime.UtcNow.ToString();
 
-            var message = InvokeBehavior(new Dictionary<string, string>
+            var message = await InvokeBehaviorAsync(new Dictionary<string, string>
             {
                 {Headers.TimeSent, timeSent}
             });
@@ -34,18 +36,18 @@
 
 
         [Test]
-        public void Should_set_the_nsb_version_header()
+        public async Task Should_set_the_nsb_version_headerAsync()
         {
-            var message = InvokeBehavior();
+            var message = await InvokeBehaviorAsync();
 
             Assert.True(message.Headers.ContainsKey(Headers.NServiceBusVersion));
         }
 
         [Test]
-        public void Should_not_override_nsb_version_header()
+        public async Task Should_not_override_nsb_version_headerAsync()
         {
             var nsbVersion = "some-crazy-version-number";
-            var message = InvokeBehavior(new Dictionary<string, string>
+            var message = await InvokeBehaviorAsync(new Dictionary<string, string>
             {
                  {Headers.NServiceBusVersion, nsbVersion}
             });
@@ -54,12 +56,12 @@
             Assert.AreEqual(nsbVersion, message.Headers[Headers.NServiceBusVersion]);
         }
 
-        static OutgoingMessage InvokeBehavior(Dictionary<string, string> headers = null)
+        static async Task<OutgoingMessage> InvokeBehaviorAsync(Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
         {
             var message = new OutgoingMessage("id", headers ?? new Dictionary<string, string>(), null);
 
-            new AttachSenderRelatedInfoOnMessageBehavior()
-                .Invoke(new TestableRoutingContext {Message = message, RoutingStrategies = new List<UnicastRoutingStrategy> { new UnicastRoutingStrategy("_") }}, _ => TaskEx.CompletedTask);
+            await new AttachSenderRelatedInfoOnMessageBehavior()
+                .Invoke(new TestableRoutingContext { Message = message, RoutingStrategies = new List<UnicastRoutingStrategy> { new UnicastRoutingStrategy("_") }, CancellationToken = cancellationToken }, _ => Task.CompletedTask);
 
             return message;
         }

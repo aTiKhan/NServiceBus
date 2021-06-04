@@ -31,7 +31,7 @@ namespace NServiceBus.AcceptanceTests.Core.Conventions
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(NonMatchingMessageWithHandler), typeof(Receiver));
+                    c.ConfigureRouting().RouteToEndpoint(typeof(NonMatchingMessageWithHandler), typeof(Receiver));
                 });
             }
         }
@@ -45,13 +45,18 @@ namespace NServiceBus.AcceptanceTests.Core.Conventions
 
             class MyHandler : IHandleMessages<NonMatchingMessageWithHandler>
             {
-                public Context TestContext { get; set; }
+                public MyHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(NonMatchingMessageWithHandler message, IMessageHandlerContext context)
                 {
-                    TestContext.GotTheMessage = true;
+                    testContext.GotTheMessage = true;
                     return Task.FromResult(0);
                 }
+
+                readonly Context testContext;
             }
         }
 

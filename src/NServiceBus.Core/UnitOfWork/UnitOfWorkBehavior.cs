@@ -3,7 +3,9 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using UnitOfWork;
 
@@ -26,7 +28,7 @@
             try
             {
                 var hasUow = false;
-                foreach (var uow in context.Builder.BuildAll<IManageUnitsOfWork>())
+                foreach (var uow in context.Builder.GetServices<IManageUnitsOfWork>())
                 {
                     hasUow = true;
                     unitsOfWork.Push(uow);
@@ -51,19 +53,19 @@
             {
                 throw;
             }
-            catch (Exception exception)
+            catch (Exception ex) when (!ex.IsCausedBy(context.CancellationToken))
             {
-                var trailingExceptions = await AppendEndExceptions(unitsOfWork, exception).ConfigureAwait(false);
+                var trailingExceptions = await AppendEndExceptions(unitsOfWork, ex, context.CancellationToken).ConfigureAwait(false);
                 if (trailingExceptions.Any())
                 {
-                    trailingExceptions.Insert(0, exception);
+                    trailingExceptions.Insert(0, ex);
                     throw new AggregateException(trailingExceptions);
                 }
                 throw;
             }
         }
 
-        static async Task<List<Exception>> AppendEndExceptions(Stack<IManageUnitsOfWork> unitsOfWork, Exception initialException)
+        static async Task<List<Exception>> AppendEndExceptions(Stack<IManageUnitsOfWork> unitsOfWork, Exception initialException, CancellationToken cancellationToken)
         {
             var exceptionsToThrow = new List<Exception>();
             while (unitsOfWork.Count > 0)

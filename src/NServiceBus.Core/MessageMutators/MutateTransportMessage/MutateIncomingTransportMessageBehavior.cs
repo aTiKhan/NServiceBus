@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using MessageMutator;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
 
     class MutateIncomingTransportMessageBehavior : IBehavior<IIncomingPhysicalMessageContext, IIncomingPhysicalMessageContext>
@@ -25,9 +26,9 @@
 
         async Task InvokeIncomingTransportMessagesMutators(IIncomingPhysicalMessageContext context, Func<IIncomingPhysicalMessageContext, Task> next)
         {
-            var mutatorsRegisteredInDI = context.Builder.BuildAll<IMutateIncomingTransportMessages>();
+            var mutatorsRegisteredInDI = context.Builder.GetServices<IMutateIncomingTransportMessages>();
             var transportMessage = context.Message;
-            var mutatorContext = new MutateIncomingTransportMessageContext(transportMessage.Body, transportMessage.Headers);
+            var mutatorContext = new MutateIncomingTransportMessageContext(transportMessage.Body, transportMessage.Headers, context.CancellationToken);
 
             var hasMutators = false;
 

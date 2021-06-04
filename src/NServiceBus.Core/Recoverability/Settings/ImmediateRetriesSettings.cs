@@ -2,6 +2,7 @@ namespace NServiceBus
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Configuration.AdvancedExtensibility;
     using Faults;
@@ -10,7 +11,7 @@ namespace NServiceBus
     /// <summary>
     /// Configuration settings for Immediate Retries.
     /// </summary>
-    public class ImmediateRetriesSettings : ExposeSettings
+    public partial class ImmediateRetriesSettings : ExposeSettings
     {
         internal ImmediateRetriesSettings(SettingsHolder settings) : base(settings)
         {
@@ -31,21 +32,21 @@ namespace NServiceBus
         /// <summary>
         /// Registers a callback which is invoked when a message fails processing and will be immediately retried.
         /// </summary>
-        public ImmediateRetriesSettings OnMessageBeingRetried(Func<ImmediateRetryMessage, Task> notificationCallback)
+        public ImmediateRetriesSettings OnMessageBeingRetried(Func<ImmediateRetryMessage, CancellationToken, Task> notificationCallback)
         {
             Guard.AgainstNull(nameof(notificationCallback), notificationCallback);
 
             var subscriptions = Settings.Get<RecoverabilityComponent.Configuration>();
-            subscriptions.MessageRetryNotification.Subscribe(retry =>
+            subscriptions.MessageRetryNotification.Subscribe((retry, cancellationToken) =>
             {
                 if (!retry.IsImmediateRetry)
                 {
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
 
                 var headerCopy = new Dictionary<string, string>(retry.Message.Headers);
                 var bodyCopy = retry.Message.Body.Copy();
-                return notificationCallback(new ImmediateRetryMessage(retry.Message.MessageId, headerCopy, bodyCopy, retry.Exception, retry.Attempt));
+                return notificationCallback(new ImmediateRetryMessage(retry.Message.MessageId, headerCopy, bodyCopy, retry.Exception, retry.Attempt), cancellationToken);
             });
 
             return this;

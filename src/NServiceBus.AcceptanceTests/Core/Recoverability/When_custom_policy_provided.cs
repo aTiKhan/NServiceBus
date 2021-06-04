@@ -5,7 +5,6 @@ namespace NServiceBus.AcceptanceTests.Core.Recoverability
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_custom_policy_provided : NServiceBusAcceptanceTest
@@ -13,6 +12,8 @@ namespace NServiceBus.AcceptanceTests.Core.Recoverability
         [Test]
         public async Task Should_pass_recoverability_configuration()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b =>
                     b.When(bus => bus.SendLocal(new MessageToBeRetried()))
@@ -40,9 +41,8 @@ namespace NServiceBus.AcceptanceTests.Core.Recoverability
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    var testContext = (Context) context.ScenarioContext;
+                    var testContext = (Context)context.ScenarioContext;
 
-                    config.EnableFeature<TimeoutManager>();
                     config.Recoverability()
                         .Immediate(immediate => immediate.NumberOfRetries(MaxImmediateRetries))
                         .Delayed(delayed => delayed.NumberOfRetries(MaxDelayedRetries).TimeIncrease(DelayedRetryDelayIncrease))

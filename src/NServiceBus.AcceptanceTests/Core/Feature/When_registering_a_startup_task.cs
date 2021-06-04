@@ -1,10 +1,12 @@
 ﻿namespace NServiceBus.AcceptanceTests.Core.Feature
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
     using Features;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
 
     public class When_registering_a_startup_task : NServiceBusAcceptanceTest
@@ -48,7 +50,7 @@
 
                 protected override void Setup(FeatureConfigurationContext context)
                 {
-                    context.RegisterStartupTask(b => new MyTask(b.Build<Context>()));
+                    context.RegisterStartupTask(b => new MyTask(b.GetService<Context>()));
                 }
 
                 public class MyTask : FeatureStartupTask
@@ -58,13 +60,13 @@
                         this.scenarioContext = scenarioContext;
                     }
 
-                    protected override Task OnStart(IMessageSession session)
+                    protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                     {
                         scenarioContext.SendOnlyEndpointWasStarted = true;
                         return Task.FromResult(0);
                     }
 
-                    protected override Task OnStop(IMessageSession session)
+                    protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                     {
                         return Task.FromResult(0);
                     }

@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Outbox;
 
@@ -9,9 +10,9 @@
         {
         }
 
-        public Task Commit()
+        public Task Commit(CancellationToken cancellationToken = default)
         {
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

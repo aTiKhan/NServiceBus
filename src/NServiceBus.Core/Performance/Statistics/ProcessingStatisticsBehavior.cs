@@ -14,10 +14,10 @@
             var headers = context.Message.Headers;
             if (headers.TryGetValue(Headers.TimeSent, out var timeSentString))
             {
-                state.TimeSent = DateTimeExtensions.ToUtcDateTime(timeSentString);
+                state.TimeSent = DateTimeOffsetHelper.ToDateTimeOffset(timeSentString);
             }
 
-            state.ProcessingStarted = DateTime.UtcNow;
+            state.ProcessingStarted = DateTimeOffset.UtcNow;
             context.Extensions.Set(state);
             var stopwatch = Stopwatch.StartNew();
             try
@@ -33,9 +33,9 @@
 
         public class State
         {
-            public DateTime? TimeSent { get; set; }
-            public DateTime ProcessingStarted { get; set; }
-            public DateTime ProcessingEnded { get; set; }
+            public DateTimeOffset? TimeSent { get; set; }
+            public DateTimeOffset ProcessingStarted { get; set; }
+            public DateTimeOffset ProcessingEnded { get; set; }
         }
     }
 }

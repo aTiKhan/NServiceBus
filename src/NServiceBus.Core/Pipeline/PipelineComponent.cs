@@ -1,6 +1,6 @@
 namespace NServiceBus
 {
-    using ObjectBuilder;
+    using System;
     using Pipeline;
 
     class PipelineComponent
@@ -16,23 +16,23 @@ namespace NServiceBus
 
             foreach (var registeredBehavior in modifications.Replacements)
             {
-                hostingConfiguration.Container.ConfigureComponent(registeredBehavior.BehaviorType, DependencyLifecycle.InstancePerCall);
+                hostingConfiguration.Services.ConfigureComponent(registeredBehavior.BehaviorType, DependencyLifecycle.InstancePerCall);
             }
 
             foreach (var step in modifications.Additions)
             {
-                step.ApplyContainerRegistration(hostingConfiguration.Container);
+                step.ApplyContainerRegistration(hostingConfiguration.Services);
             }
 
             return new PipelineComponent(modifications);
         }
 
-        public Pipeline<T> CreatePipeline<T>(IBuilder builder) where T : IBehaviorContext
+        public Pipeline<T> CreatePipeline<T>(IServiceProvider builder) where T : IBehaviorContext
         {
             return new Pipeline<T>(builder, modifications);
         }
 
-        public PipelineCache BuildPipelineCache(IBuilder rootBuilder)
+        public PipelineCache BuildPipelineCache(IServiceProvider rootBuilder)
         {
             return new PipelineCache(rootBuilder, modifications);
         }

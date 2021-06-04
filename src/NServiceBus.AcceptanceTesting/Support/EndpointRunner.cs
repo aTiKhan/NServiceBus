@@ -37,9 +37,8 @@
             {
                 behavior = endpointBehavior;
                 scenarioContext = run.ScenarioContext;
-                var endpointConfigurationFactory = (IEndpointConfigurationFactory)Activator.CreateInstance(endpointBehavior.EndpointBuilderType);
-                endpointConfigurationFactory.ScenarioContext = run.ScenarioContext;
-                configuration = endpointConfigurationFactory.Get();
+                endpointBehavior.EndpointBuilder.ScenarioContext = run.ScenarioContext;
+                configuration = endpointBehavior.EndpointBuilder.Get();
                 configuration.EndpointName = endpointName;
 
                 if (!string.IsNullOrEmpty(configuration.CustomMachineName))
@@ -60,8 +59,8 @@
 
                 startable = await createCallback(endpointConfiguration).ConfigureAwait(false);
 
-                var transportInfrastructure = endpointConfiguration.GetSettings().Get<TransportInfrastructure>();
-                scenarioContext.HasNativePubSubSupport = transportInfrastructure.OutboundRoutingPolicy.Publishes == OutboundRoutingType.Multicast;
+                var transportDefinition = endpointConfiguration.GetSettings().Get<TransportDefinition>();
+                scenarioContext.HasNativePubSubSupport = transportDefinition.SupportsPublishSubscribe;
             }
             catch (Exception ex)
             {
@@ -72,7 +71,7 @@
 
         void TrackFailingMessages(string endpointName, EndpointConfiguration endpointConfiguration)
         {
-            endpointConfiguration.Recoverability().Failed(settings => settings.OnMessageSentToErrorQueue(m =>
+            endpointConfiguration.Recoverability().Failed(settings => settings.OnMessageSentToErrorQueue((m, _) =>
             {
                 scenarioContext.FailedMessages.AddOrUpdate(
                     endpointName,
@@ -105,17 +104,12 @@
             }
         }
 
-        public override async Task Start(CancellationToken token)
+        public override async Task Start(CancellationToken cancellationToken = default)
         {
             ScenarioContext.CurrentEndpoint = configuration.EndpointName;
             try
             {
                 endpointInstance = await startCallback(startable).ConfigureAwait(false);
-
-                if (token.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException("Endpoint start was aborted");
-                }
             }
             catch (Exception ex)
             {
@@ -125,7 +119,7 @@
             }
         }
 
-        public override async Task ComponentsStarted(CancellationToken token)
+        public override async Task ComponentsStarted(CancellationToken cancellationToken = default)
         {
             ScenarioContext.CurrentEndpoint = configuration.EndpointName;
             try
@@ -136,24 +130,16 @@
                     {
                         var executedWhens = new HashSet<Guid>();
 
-                        while (!token.IsCancellationRequested)
+                        while (true)
                         {
                             if (executedWhens.Count == behavior.Whens.Count)
                             {
                                 break;
                             }
 
-                            if (token.IsCancellationRequested)
-                            {
-                                break;
-                            }
-
                             foreach (var when in behavior.Whens)
                             {
-                                if (token.IsCancellationRequested)
-                                {
-                                    break;
-                                }
+                                cancellationToken.ThrowIfCancellationRequested();
 
                                 if (executedWhens.Contains(when.Id))
                                 {
@@ -168,10 +154,10 @@
 
                             await Task.Yield(); // enforce yield current context, tight loop could introduce starvation
                         }
-                    }, token).ConfigureAwait(false);
+                    }, CancellationToken.None).ConfigureAwait(false);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
                 Logger.Error($"Failed to execute Whens on endpoint{configuration.EndpointName}", ex);
 

@@ -3,7 +3,6 @@
     using System;
     using System.Text;
     using System.Threading.Tasks;
-    using DeliveryConstraints;
     using Logging;
     using Pipeline;
     using Routing;
@@ -22,7 +21,13 @@
             {
                 var addressLabel = strategy.Apply(context.Message.Headers);
                 var message = new OutgoingMessage(context.Message.MessageId, context.Message.Headers, context.Message.Body);
-                operations[index] = new TransportOperation(message, addressLabel, dispatchConsistency, context.Extensions.GetDeliveryConstraints());
+
+                if (!context.Extensions.TryGet(out DispatchProperties dispatchProperties))
+                {
+                    dispatchProperties = new DispatchProperties();
+                }
+
+                operations[index] = new TransportOperation(message, addressLabel, dispatchProperties, dispatchConsistency);
                 index++;
             }
 
@@ -34,7 +39,7 @@
             if (!state.ImmediateDispatch && context.Extensions.TryGet(out PendingTransportOperations pendingOperations))
             {
                 pendingOperations.AddRange(operations);
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             return stage(this.CreateDispatchContext(operations, context));

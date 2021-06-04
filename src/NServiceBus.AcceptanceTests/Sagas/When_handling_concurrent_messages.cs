@@ -27,15 +27,12 @@
                     {
                         if (useOutbox)
                         {
+                            cfg.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                             cfg.EnableOutbox();
                         }
                         cfg.Recoverability().Immediate(x => x.NumberOfRetries(5));
                     });
                     b.When((session, ctx) => session.SendLocal(new StartMsg { OrderId = "12345" }));
-
-                    var timeout = DateTime.UtcNow.AddSeconds(15);
-
-                    b.When(c => DateTime.UtcNow > timeout, (session, ctx) => session.SendLocal(new FinishMsg { OrderId = "12345" }));
                 })
                 .Done(c => c.SagaData != null)
                 .Run();
@@ -65,8 +62,6 @@
                 IHandleMessages<ContinueMsg>,
                 IHandleMessages<FinishMsg>
             {
-                Context testContext;
-
                 public OrderSaga(Context testContext)
                 {
                     this.testContext = testContext;
@@ -105,6 +100,8 @@
                     testContext.SagaData = this.Data;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
 
             public class OrderSagaData : ContainSagaData

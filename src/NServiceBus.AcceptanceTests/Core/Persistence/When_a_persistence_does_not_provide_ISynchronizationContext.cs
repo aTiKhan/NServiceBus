@@ -1,10 +1,12 @@
 ﻿namespace NServiceBus.AcceptanceTests.Core.Persistence
 {
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
     using Extensibility;
+    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.Persistence;
     using NUnit.Framework;
     using Unicast.Subscriptions;
@@ -14,7 +16,8 @@
     {
         // Run this test twice to ensure that the NoOpCompletableSynchronizedStorageSession's IDisposable method
         // is not altered by Fody to throw an ObjectDisposedException if it was disposed
-        [Test, Repeat(2)]
+        [Test]
+        [Repeat(2)]
         public Task ReceiveFeature_should_work_without_ISynchronizedStorage()
         {
             return Scenario.Define<Context>()
@@ -23,11 +26,10 @@
                 .Run();
         }
 
-        class InMemoryNoSyncContextPersistence : PersistenceDefinition
+        class FakeNoSyncContextPersistence : PersistenceDefinition
         {
-            public InMemoryNoSyncContextPersistence()
+            public FakeNoSyncContextPersistence()
             {
-                Supports<StorageType.Timeouts>(s => { });
                 Supports<StorageType.Sagas>(s => { });
                 Supports<StorageType.Subscriptions>(s => { });
             }
@@ -35,17 +37,17 @@
 
         class NoOpISubscriptionStorage : ISubscriptionStorage
         {
-            public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
+            public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult<IEnumerable<Subscriber>>(null);
             }
 
-            public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
+            public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(0);
             }
 
-            public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
+            public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(0);
             }
@@ -57,22 +59,27 @@
             {
                 EndpointSetup<ServerWithNoDefaultPersistenceDefinitions>(c =>
                 {
-                    c.RegisterComponents(container => container.ConfigureComponent<NoOpISubscriptionStorage>(DependencyLifecycle.SingleInstance));
-                    c.UsePersistence<InMemoryNoSyncContextPersistence>();
+                    c.RegisterComponents(container => container.AddSingleton<ISubscriptionStorage, NoOpISubscriptionStorage>());
+                    c.UsePersistence<FakeNoSyncContextPersistence>();
                 });
             }
         }
 
         public class MyMessageHandler : IHandleMessages<MyMessage>
         {
-            public Context Context { get; set; }
+            public MyMessageHandler(Context context)
+            {
+                testContext = context;
+            }
 
             public Task Handle(MyMessage message, IMessageHandlerContext context)
             {
-                Context.MessageReceived = true;
+                testContext.MessageReceived = true;
 
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
 
         public class Context : ScenarioContext

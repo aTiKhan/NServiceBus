@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using NServiceBus.Extensibility;
     using NUnit.Framework;
     using Transport;
 
@@ -20,7 +21,7 @@
         }
 
         class MyBaseCustomException : Exception
-        {            
+        {
         }
 
         class MyCustomException : MyBaseCustomException
@@ -125,10 +126,10 @@
             var policy = CreatePolicy(maxImmediateRetries: 0, maxDelayedRetries: 2, delayedRetryDelay: baseDelay);
 
             var errorContext = CreateErrorContext(retryNumber: 0);
-            var result1 = (DelayedRetry) policy(errorContext);
+            var result1 = (DelayedRetry)policy(errorContext);
 
             errorContext = CreateErrorContext(retryNumber: 1);
-            var result2 = (DelayedRetry) policy(errorContext);
+            var result2 = (DelayedRetry)policy(errorContext);
 
             errorContext = CreateErrorContext(retryNumber: 2);
             var result3 = policy(errorContext);
@@ -149,7 +150,7 @@
             var moreThanADayAgo = now.AddHours(-24).AddTicks(-1);
             var headers = new Dictionary<string, string>
             {
-                {Headers.DelayedRetriesTimestamp, DateTimeExtensions.ToWireFormattedString(moreThanADayAgo)}
+                {Headers.DelayedRetriesTimestamp, DateTimeOffsetHelper.ToWireFormattedString(moreThanADayAgo)}
             };
 
             var errorContext = CreateErrorContext(headers: headers);
@@ -159,13 +160,17 @@
             Assert.IsInstanceOf<MoveToError>(result);
         }
 
-        ErrorContext CreateErrorContext(int numberOfDeliveryAttempts = 1, int? retryNumber = null, Dictionary<string, string> headers = null, Exception exception = null)
-        {
-            return new ErrorContext(exception ?? new Exception(), retryNumber.HasValue ? new Dictionary<string, string>
-            {
-                {Headers.DelayedRetries, retryNumber.ToString()}
-            } : headers ?? new Dictionary<string, string>(), "message-id", new byte[0], new TransportTransaction(), numberOfDeliveryAttempts);
-        }
+        ErrorContext CreateErrorContext(int numberOfDeliveryAttempts = 1, int? retryNumber = null, Dictionary<string, string> headers = null, Exception exception = null) =>
+            new ErrorContext(
+                exception ?? new Exception(),
+                retryNumber.HasValue
+                    ? new Dictionary<string, string> { { Headers.DelayedRetries, retryNumber.ToString() } }
+                    : headers ?? new Dictionary<string, string>(),
+                "message-id",
+                new byte[0],
+                new TransportTransaction(),
+                numberOfDeliveryAttempts,
+                new ContextBag());
 
         static Func<ErrorContext, RecoverabilityAction> CreatePolicy(int maxImmediateRetries = 2, int maxDelayedRetries = 2, TimeSpan? delayedRetryDelay = null, HashSet<Type> unrecoverableExceptions = null)
         {

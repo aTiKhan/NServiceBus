@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     //repro for issue: https://github.com/NServiceBus/NServiceBus/issues/1020
@@ -13,6 +12,8 @@
         [Test]
         public Task Should_invoke_the_correct_handle_methods_on_the_saga()
         {
+            Requires.DelayedDelivery();
+
             return Scenario.Define<Context>()
                 .WithEndpoint<DelayedRetryEndpoint>(b => b
                     .When(session => session.SendLocal(new StartSagaMessage
@@ -35,7 +36,6 @@
             {
                 EndpointSetup<DefaultServer>(b =>
                 {
-                    b.EnableFeature<TimeoutManager>();
                     var recoverability = b.Recoverability();
                     recoverability.Delayed(settings =>
                     {
@@ -49,7 +49,10 @@
                 IAmStartedByMessages<StartSagaMessage>,
                 IHandleMessages<SecondSagaMessage>
             {
-                public Context TestContext { get; set; }
+                public DelayedRetryTestingSaga(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
                 {
@@ -63,14 +66,14 @@
 
                 public Task Handle(SecondSagaMessage message, IMessageHandlerContext context)
                 {
-                    TestContext.NumberOfTimesInvoked++;
+                    testContext.NumberOfTimesInvoked++;
 
-                    if (TestContext.NumberOfTimesInvoked < 2)
+                    if (testContext.NumberOfTimesInvoked < 2)
                     {
                         throw new SimulatedException();
                     }
 
-                    TestContext.SecondMessageProcessed = true;
+                    testContext.SecondMessageProcessed = true;
 
                     return Task.FromResult(0);
                 }
@@ -82,6 +85,8 @@
                     mapper.ConfigureMapping<SecondSagaMessage>(m => m.SomeId)
                         .ToSaga(s => s.SomeId);
                 }
+
+                Context testContext;
             }
 
             public class DelayedRetryTestingSagaData : IContainSagaData

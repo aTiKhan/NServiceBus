@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Runtime.Serialization.Formatters.Binary;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
@@ -49,10 +48,10 @@
         {
             public CustomSerializationSender()
             {
-                EndpointSetup<DefaultServer>(c =>
+                EndpointSetup<DefaultServer>((c, r) =>
                 {
-                    c.UseSerialization<MyCustomSerializer>().Settings((Context) ScenarioContext, "");
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyRequest), typeof(XmlCustomSerializationReceiver));
+                    c.UseSerialization<MyCustomSerializer>().Settings((Context)r.ScenarioContext, "");
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MyRequest), typeof(XmlCustomSerializationReceiver));
                 });
             }
         }
@@ -61,22 +60,27 @@
         {
             public XmlCustomSerializationReceiver()
             {
-                EndpointSetup<DefaultServer>(c =>
+                EndpointSetup<DefaultServer>((c, r) =>
                 {
                     c.UseSerialization<XmlSerializer>();
-                    c.AddDeserializer<MyCustomSerializer>().Settings((Context) ScenarioContext, "SomeFancySettings");
+                    c.AddDeserializer<MyCustomSerializer>().Settings((Context)r.ScenarioContext, "SomeFancySettings");
                 });
             }
 
             class MyRequestHandler : IHandleMessages<MyRequest>
             {
-                public Context Context { get; set; }
+                public MyRequestHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyRequest request, IMessageHandlerContext context)
                 {
-                    Context.HandlerGotTheRequest = true;
+                    testContext.HandlerGotTheRequest = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -104,7 +108,7 @@
 
             public void Serialize(object message, Stream stream)
             {
-                var serializer = new BinaryFormatter();
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(MyRequest));
 
                 context.SerializeCalled = true;
 
@@ -113,7 +117,7 @@
 
             public object[] Deserialize(Stream stream, IList<Type> messageTypes = null)
             {
-                var serializer = new BinaryFormatter();
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(MyRequest));
 
                 stream.Position = 0;
                 var msg = serializer.Deserialize(stream);

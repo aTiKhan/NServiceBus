@@ -55,17 +55,22 @@
 
             class SendOrderAcknowledgementHandler : IHandleMessages<SendOrderAcknowledgement>
             {
-                public Context Context { get; set; }
+                public SendOrderAcknowledgementHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(SendOrderAcknowledgement message, IMessageHandlerContext context)
                 {
-                    Context.MessagesReceivedByDownstreamEndpoint++;
+                    testContext.MessagesReceivedByDownstreamEndpoint++;
                     if (message.Terminator)
                     {
-                        Context.Done = true;
+                        testContext.Done = true;
                     }
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -77,23 +82,29 @@
                 {
                     // limit to one to avoid race conditions on dispatch and this allows us to reliably check whether deduplication happens properly
                     b.LimitMessageProcessingConcurrencyTo(1);
+                    b.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                     b.EnableOutbox();
-                    b.ConfigureTransport().Routing().RouteToEndpoint(typeof(SendOrderAcknowledgement), typeof(DownstreamEndpoint));
+                    b.ConfigureRouting().RouteToEndpoint(typeof(SendOrderAcknowledgement), typeof(DownstreamEndpoint));
                 });
             }
 
             class PlaceOrderHandler : IHandleMessages<PlaceOrder>
             {
-                public Context Context { get; set; }
+                public PlaceOrderHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(PlaceOrder message, IMessageHandlerContext context)
                 {
-                    Context.MessagesReceivedByOutboxEndpoint++;
+                    testContext.MessagesReceivedByOutboxEndpoint++;
                     return context.Send(new SendOrderAcknowledgement
                     {
                         Terminator = message.Terminator
                     });
                 }
+
+                Context testContext;
             }
         }
 

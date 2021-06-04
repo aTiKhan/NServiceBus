@@ -5,6 +5,7 @@
     using AcceptanceTesting;
     using Configuration.AdvancedExtensibility;
     using EndpointTemplates;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
     using Unicast;
 
@@ -13,12 +14,12 @@
         [Test]
         public async Task Should_invoke_manually_registered_handlers()
         {
-            Requires.NativePubSubSupport();
+            Requires.MessageDrivenPubSub();
 
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<EndpointWithRegularHandler>(e => e
-                    .When(ctx => ctx.SendLocal(new SomeCommand()))
-                    .When(ctx => ctx.Publish(new SomeEvent()))) // verify autosubscribe picks up the handlers too
+                    .When(s => s.SendLocal(new SomeCommand()))
+                    .When(ctx => ctx.EventSubscribed, s => s.Publish(new SomeEvent()))) // verify autosubscribe picks up the handlers too
                 .Done(c => c.RegularCommandHandlerInvoked
                            && c.ManuallyRegisteredCommandHandlerInvoked
                            && c.RegularEventHandlerInvoked
@@ -37,6 +38,7 @@
             public bool ManuallyRegisteredCommandHandlerInvoked { get; set; }
             public bool RegularEventHandlerInvoked { get; set; }
             public bool ManuallyRegisteredEventHandlerInvoked { get; set; }
+            public bool EventSubscribed { get; set; }
         }
 
         class EndpointWithRegularHandler : EndpointConfigurationBuilder
@@ -50,8 +52,15 @@
                         c.GetSettings().Set(registry);
                         // the handler isn't registered for DI automatically
                         c.RegisterComponents(components => components
-                            .ConfigureComponent<ManuallyRegisteredHandler>(DependencyLifecycle.InstancePerCall));
-                    })
+                            .AddTransient<ManuallyRegisteredHandler>());
+                        c.OnEndpointSubscribed<Context>((t, ctx) =>
+                        {
+                            if (t.MessageType == typeof(SomeEvent).AssemblyQualifiedName)
+                            {
+                                ctx.EventSubscribed = true;
+                            }
+                        });
+                    }, metadata => metadata.RegisterPublisherFor<SomeEvent>(AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(EndpointWithRegularHandler))))
                     .ExcludeType<ManuallyRegisteredHandler>();
             }
 

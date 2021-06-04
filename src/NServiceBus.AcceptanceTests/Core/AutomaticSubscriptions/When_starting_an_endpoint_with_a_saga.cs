@@ -37,7 +37,7 @@ namespace NServiceBus.AcceptanceTests.Core.AutomaticSubscriptions
         {
             public Subscriber()
             {
-                EndpointSetup<DefaultServer>(c => c.Pipeline.Register("SubscriptionSpy", new SubscriptionSpy((Context) ScenarioContext), "Spies on subscriptions made"),
+                EndpointSetup<DefaultServer>((c, r) => c.Pipeline.Register("SubscriptionSpy", new SubscriptionSpy((Context)r.ScenarioContext), "Spies on subscriptions made"),
                     metadata =>
                     {
                         metadata.RegisterPublisherFor<MyEventBase>(typeof(Subscriber));
@@ -56,7 +56,7 @@ namespace NServiceBus.AcceptanceTests.Core.AutomaticSubscriptions
                 {
                     await next(context).ConfigureAwait(false);
 
-                    testContext.EventsSubscribedTo.Add(context.EventType);
+                    testContext.EventsSubscribedTo.AddRange(context.EventTypes);
                 }
 
                 Context testContext;

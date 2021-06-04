@@ -47,54 +47,69 @@
 
         public class CatchAllHandler_object : IHandleMessages<object>
         {
-            public Context Context { get; set; }
+            public CatchAllHandler_object(Context context)
+            {
+                testContext = context;
+            }
 
             public Task Handle(object message, IMessageHandlerContext context)
             {
-                var myMessage = (MyMessage) message;
-                if (Context.Id != myMessage.Id)
+                var myMessage = (MyMessage)message;
+                if (testContext.Id != myMessage.Id)
                 {
                     return Task.FromResult(0);
                 }
 
-                Context.ObjectHandlerWasCalled = true;
+                testContext.ObjectHandlerWasCalled = true;
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
 
         public class CatchAllHandler_dynamic : IHandleMessages<object>
         {
-            public Context Context { get; set; }
+            public CatchAllHandler_dynamic(Context testContext)
+            {
+                this.testContext = testContext;
+            }
 
             public Task Handle(dynamic message, IMessageHandlerContext context)
             {
-                var myMessage = (MyMessage) message;
-                if (Context.Id != myMessage.Id)
+                var myMessage = (MyMessage)message;
+                if (testContext.Id != myMessage.Id)
                 {
                     return Task.FromResult(0);
                 }
 
-                Context.DynamicHandlerWasCalled = true;
+                testContext.DynamicHandlerWasCalled = true;
 
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
 
         public class CatchAllHandler_IMessage : IHandleMessages<IMessage>
         {
-            public Context Context { get; set; }
+            public CatchAllHandler_IMessage(Context testContext)
+            {
+                this.testContext = testContext;
+            }
 
             public Task Handle(IMessage message, IMessageHandlerContext context)
             {
-                var myMessage = (MyMessage) message;
-                if (Context.Id != myMessage.Id)
+                var myMessage = (MyMessage)message;
+                if (testContext.Id != myMessage.Id)
                 {
                     return Task.FromResult(0);
                 }
 
-                Context.IMessageHandlerWasCalled = true;
+                testContext.IMessageHandlerWasCalled = true;
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
     }
 }

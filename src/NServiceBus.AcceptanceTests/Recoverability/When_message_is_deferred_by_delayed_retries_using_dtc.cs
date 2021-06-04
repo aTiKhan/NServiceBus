@@ -7,7 +7,6 @@
     using System.Transactions;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_message_is_deferred_by_delayed_retries_using_dtc : NServiceBusAcceptanceTest
@@ -16,6 +15,7 @@
         public async Task Should_not_commit_distributed_transaction()
         {
             Requires.DtcSupport();
+            Requires.DelayedDelivery();
 
             var context = await Scenario.Define<Context>(c => c.Id = Guid.NewGuid())
                 .WithEndpoint<Endpoint>(b => b.DoNotFailOnErrorMessages()
@@ -45,7 +45,6 @@
             {
                 EndpointSetup<DefaultServer>(config =>
                 {
-                    config.EnableFeature<TimeoutManager>();
                     var recoverability = config.Recoverability();
                     recoverability.Delayed(settings =>
                     {
@@ -57,13 +56,16 @@
 
             class FailingHandler : IHandleMessages<MessageToFail>
             {
-                public Context TestContext { get; set; }
+                public FailingHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToFail message, IMessageHandlerContext context)
                 {
-                    if (message.Id == TestContext.Id)
+                    if (message.Id == testContext.Id)
                     {
-                        TestContext.NumberOfProcessingAttempts++;
+                        testContext.NumberOfProcessingAttempts++;
 
                         Transaction.Current.TransactionCompleted += CaptureTransactionStatus;
                     }
@@ -73,8 +75,10 @@
 
                 void CaptureTransactionStatus(object sender, TransactionEventArgs args)
                 {
-                    TestContext.TransactionStatuses.Add(args.Transaction.TransactionInformation.Status);
+                    testContext.TransactionStatuses.Add(args.Transaction.TransactionInformation.Status);
                 }
+
+                Context testContext;
             }
         }
 

@@ -1,14 +1,18 @@
 ﻿namespace NServiceBus
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
-    using ObjectBuilder;
+    using Microsoft.Extensions.DependencyInjection;
+    using Settings;
 
     class HostCreator
     {
-        public static ExternallyManagedContainerHost CreateWithExternallyManagedContainer(EndpointConfiguration endpointConfiguration, IConfigureComponents externalContainer)
+        public static ExternallyManagedContainerHost CreateWithExternallyManagedContainer(EndpointConfiguration endpointConfiguration, IServiceCollection serviceCollection)
         {
             var settings = endpointConfiguration.Settings;
+
+            CheckIfSettingsWhereUsedToCreateAnotherEndpoint(settings);
 
             var assemblyScanningComponent = AssemblyScanningComponent.Initialize(settings.Get<AssemblyScanningComponent.Configuration>(), settings);
 
@@ -16,12 +20,7 @@
 
             var hostingSettings = settings.Get<HostingComponent.Settings>();
 
-            var hostingConfiguration = HostingComponent.PrepareConfiguration(hostingSettings, assemblyScanningComponent, externalContainer);
-
-            if (hostingSettings.CustomObjectBuilder != null)
-            {
-                throw new InvalidOperationException("An internally managed container has already been configured using 'EndpointConfiguration.UseContainer'. It is not possible to use both an internally managed container and an externally managed container.");
-            }
+            var hostingConfiguration = HostingComponent.PrepareConfiguration(hostingSettings, assemblyScanningComponent, serviceCollection);
 
             hostingConfiguration.AddStartupDiagnosticsSection("Container", new
             {
@@ -29,66 +28,52 @@
             });
 
             var endpointCreator = EndpointCreator.Create(settings, hostingConfiguration);
-
-            var externallyManagedContainerHost = new ExternallyManagedContainerHost(endpointCreator, hostingConfiguration);
-
-            //for backwards compatibility we need to make the IBuilder available in the container
-            externalContainer.ConfigureComponent(_ => externallyManagedContainerHost.Builder.Value, DependencyLifecycle.SingleInstance);
+            var hostingComponent = HostingComponent.Initialize(hostingConfiguration, serviceCollection, false);
+            var externallyManagedContainerHost = new ExternallyManagedContainerHost(endpointCreator, hostingComponent);
 
             return externallyManagedContainerHost;
         }
 
-        public static async Task<IStartableEndpoint> CreateWithInternallyManagedContainer(EndpointConfiguration endpointConfiguration)
+        public static async Task<IStartableEndpoint> CreateWithInternallyManagedContainer(EndpointConfiguration endpointConfiguration, CancellationToken cancellationToken = default)
         {
             var settings = endpointConfiguration.Settings;
+
+            CheckIfSettingsWhereUsedToCreateAnotherEndpoint(settings);
 
             var assemblyScanningComponent = AssemblyScanningComponent.Initialize(settings.Get<AssemblyScanningComponent.Configuration>(), settings);
 
             endpointConfiguration.FinalizeConfiguration(assemblyScanningComponent.AvailableTypes);
 
-            var hostingSetting = settings.Get<HostingComponent.Settings>();
-            var useDefaultBuilder = hostingSetting.CustomObjectBuilder == null;
-            var container = useDefaultBuilder ? new LightInjectObjectBuilder() : hostingSetting.CustomObjectBuilder;
+            var serviceCollection = new ServiceCollection();
 
-            var commonObjectBuilder = new CommonObjectBuilder(container);
+            var hostingConfiguration = HostingComponent.PrepareConfiguration(settings.Get<HostingComponent.Settings>(), assemblyScanningComponent, serviceCollection);
 
-            IConfigureComponents internalContainer = commonObjectBuilder;
-            IBuilder internalBuilder = commonObjectBuilder;
-
-            //for backwards compatibility we need to make the IBuilder available in the container
-            internalContainer.ConfigureComponent(_ => internalBuilder, DependencyLifecycle.SingleInstance);
-
-            var hostingConfiguration = HostingComponent.PrepareConfiguration(settings.Get<HostingComponent.Settings>(), assemblyScanningComponent, internalContainer);
-
-            if (useDefaultBuilder)
+            hostingConfiguration.AddStartupDiagnosticsSection("Container", new
             {
-                hostingConfiguration.AddStartupDiagnosticsSection("Container", new
-                {
-                    Type = "internal"
-                });
-            }
-            else
-            {
-                var containerType = internalContainer.GetType();
-
-                hostingConfiguration.AddStartupDiagnosticsSection("Container", new
-                {
-                    Type = containerType.FullName,
-                    Version = FileVersionRetriever.GetFileVersion(containerType)
-                });
-            }
+                Type = "internal"
+            });
 
             var endpointCreator = EndpointCreator.Create(settings, hostingConfiguration);
 
-            var hostingComponent = HostingComponent.Initialize(hostingConfiguration);
+            var hostingComponent = HostingComponent.Initialize(hostingConfiguration, serviceCollection, true);
 
-            var startableEndpoint = endpointCreator.CreateStartableEndpoint(internalBuilder, hostingComponent);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            var startableEndpoint = endpointCreator.CreateStartableEndpoint(serviceProvider, hostingComponent);
+            hostingComponent.RegisterBuilder(serviceProvider);
 
-            hostingComponent.RegisterBuilder(internalBuilder, true);
-
-            await hostingComponent.RunInstallers().ConfigureAwait(false);
+            await hostingComponent.RunInstallers(cancellationToken).ConfigureAwait(false);
 
             return new InternallyManagedContainerHost(startableEndpoint, hostingComponent);
+        }
+
+        static void CheckIfSettingsWhereUsedToCreateAnotherEndpoint(SettingsHolder settings)
+        {
+            if (settings.GetOrDefault<bool>("UsedToCreateEndpoint"))
+            {
+                throw new ArgumentException("This EndpointConfiguration was already used for starting an endpoint. Each endpoint requires a new EndpointConfiguration.");
+            }
+
+            settings.Set("UsedToCreateEndpoint", true);
         }
     }
 }

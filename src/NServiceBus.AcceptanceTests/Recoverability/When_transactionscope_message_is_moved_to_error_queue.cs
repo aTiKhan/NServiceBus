@@ -43,8 +43,7 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.ConfigureTransport()
-                        .Transactions(TransportTransactionMode.TransactionScope);
+                    config.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.TransactionScope;
                     config.Pipeline.Register(new ThrowingBehavior(), "Behavior that always throws");
                     config.SendFailedMessagesTo(Conventions.EndpointNamingConvention(typeof(ErrorSpy)));
                 });
@@ -52,11 +51,14 @@
 
             class InitiatingHandler : IHandleMessages<InitiatingMessage>
             {
-                public Context TestContext { get; set; }
+                public InitiatingHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public async Task Handle(InitiatingMessage initiatingMessage, IMessageHandlerContext context)
                 {
-                    if (initiatingMessage.Id == TestContext.TestRunId)
+                    if (initiatingMessage.Id == testContext.TestRunId)
                     {
                         await context.Send(Conventions.EndpointNamingConvention(typeof(ErrorSpy)), new SubsequentMessage
                         {
@@ -64,6 +66,8 @@
                         });
                     }
                 }
+
+                Context testContext;
             }
         }
 
@@ -92,32 +96,42 @@
 
             class InitiatingMessageHandler : IHandleMessages<InitiatingMessage>
             {
-                public Context TestContext { get; set; }
+                public InitiatingMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(InitiatingMessage initiatingMessage, IMessageHandlerContext context)
                 {
-                    if (initiatingMessage.Id == TestContext.TestRunId)
+                    if (initiatingMessage.Id == testContext.TestRunId)
                     {
-                        TestContext.MessageMovedToErrorQueue = true;
+                        testContext.MessageMovedToErrorQueue = true;
                     }
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
 
             class SubsequentMessageHandler : IHandleMessages<SubsequentMessage>
             {
-                public Context TestContext { get; set; }
+                public SubsequentMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(SubsequentMessage message, IMessageHandlerContext context)
                 {
-                    if (message.Id == TestContext.TestRunId)
+                    if (message.Id == testContext.TestRunId)
                     {
-                        TestContext.OutgoingMessageSent = true;
+                        testContext.OutgoingMessageSent = true;
                     }
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

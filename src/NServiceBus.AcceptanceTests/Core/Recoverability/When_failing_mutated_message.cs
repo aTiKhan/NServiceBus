@@ -14,6 +14,8 @@
         [Test]
         public async Task Should_preserve_the_original_body()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<RetryEndpoint>(b => b
                     .When(session => session.SendLocal(new MessageToBeRetried()))
@@ -35,13 +37,12 @@
         {
             public RetryEndpoint()
             {
-                EndpointSetup<DefaultServer,Context>((config, context) =>
-                {
-                    config.EnableFeature<TimeoutManager>();
-                    config.RegisterMessageMutator(new BodyMutator(context));
-                    config.Recoverability().Delayed(settings => settings.TimeIncrease(TimeSpan.FromMilliseconds(1)));
-                    config.Recoverability().Immediate(settings => settings.NumberOfRetries(3));
-                });
+                EndpointSetup<DefaultServer, Context>((config, context) =>
+                 {
+                     config.RegisterMessageMutator(new BodyMutator(context));
+                     config.Recoverability().Delayed(settings => settings.NumberOfRetries(1).TimeIncrease(TimeSpan.FromMilliseconds(1)));
+                     config.Recoverability().Immediate(settings => settings.NumberOfRetries(3));
+                 });
             }
 
             class BodyMutator : IMutateOutgoingTransportMessages, IMutateIncomingTransportMessages

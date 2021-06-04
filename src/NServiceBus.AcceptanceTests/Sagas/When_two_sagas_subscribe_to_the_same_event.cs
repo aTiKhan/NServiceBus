@@ -5,7 +5,6 @@
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     // Repro for issue  https://github.com/NServiceBus/NServiceBus/issues/1277
@@ -44,7 +43,6 @@
             {
                 EndpointSetup<DefaultPublisher>(b =>
                 {
-                    b.EnableFeature<TimeoutManager>();
                     b.OnEndpointSubscribed<Context>((s, context) => { context.Subscribed = true; });
                 });
             }
@@ -67,8 +65,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                     {
-                        c.EnableFeature<TimeoutManager>();
-                        c.ConfigureTransport().Routing().RouteToEndpoint(typeof(OpenGroupCommand), typeof(Publisher));
+                        c.ConfigureRouting().RouteToEndpoint(typeof(OpenGroupCommand), typeof(Publisher));
                     },
                     metadata => metadata.RegisterPublisherFor<GroupPendingEvent>(typeof(Publisher)));
             }
@@ -77,7 +74,10 @@
                 IAmStartedByMessages<GroupPendingEvent>,
                 IHandleMessages<CompleteSaga1Now>
             {
-                public Context TestContext { get; set; }
+                public Saga1(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(GroupPendingEvent message, IMessageHandlerContext context)
                 {
@@ -89,7 +89,7 @@
 
                 public Task Handle(CompleteSaga1Now message, IMessageHandlerContext context)
                 {
-                    TestContext.DidSaga1EventHandlerGetInvoked = true;
+                    testContext.DidSaga1EventHandlerGetInvoked = true;
 
                     MarkAsComplete();
 
@@ -106,13 +106,18 @@
                 {
                     public virtual Guid DataId { get; set; }
                 }
+
+                Context testContext;
             }
 
             public class Saga2 : Saga<Saga2.MySaga2Data>,
                 IAmStartedByMessages<StartSaga2>,
                 IHandleMessages<GroupPendingEvent>
             {
-                public Context TestContext { get; set; }
+                public Saga2(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(StartSaga2 message, IMessageHandlerContext context)
                 {
@@ -124,7 +129,7 @@
 
                 public Task Handle(GroupPendingEvent message, IMessageHandlerContext context)
                 {
-                    TestContext.DidSaga2EventHandlerGetInvoked = true;
+                    testContext.DidSaga2EventHandlerGetInvoked = true;
                     MarkAsComplete();
                     return Task.FromResult(0);
                 }
@@ -139,6 +144,8 @@
                 {
                     public virtual Guid DataId { get; set; }
                 }
+
+                Context testContext;
             }
         }
 

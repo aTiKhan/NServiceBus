@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_using_a_received_message_for_timeout : NServiceBusAcceptanceTest
@@ -12,6 +11,8 @@
         [Test]
         public async Task Timeout_should_be_received_after_expiration()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<ReceiveMessageForTimeoutEndpoint>(g => g.When(session => session.SendLocal(new StartSagaMessage
                 {
@@ -34,23 +35,26 @@
         {
             public ReceiveMessageForTimeoutEndpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class TestSaga01 : Saga<TestSagaData01>, IAmStartedByMessages<StartSagaMessage>, IHandleTimeouts<StartSagaMessage>
             {
-                public Context TestContext { get; set; }
+                public TestSaga01(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
                 {
-                    TestContext.HandlerCalled++;
+                    testContext.HandlerCalled++;
                     return RequestTimeout(context, TimeSpan.FromMilliseconds(100), message);
                 }
 
                 public Task Timeout(StartSagaMessage message, IMessageHandlerContext context)
                 {
                     MarkAsComplete();
-                    TestContext.TimeoutReceived = true;
+                    testContext.TimeoutReceived = true;
                     return Task.FromResult(0);
                 }
 
@@ -59,6 +63,8 @@
                     mapper.ConfigureMapping<StartSagaMessage>(m => m.SomeId)
                         .ToSaga(s => s.SomeId);
                 }
+
+                Context testContext;
             }
 
             public class TestSagaData01 : IContainSagaData

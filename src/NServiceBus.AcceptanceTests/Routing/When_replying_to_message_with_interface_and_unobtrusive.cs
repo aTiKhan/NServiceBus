@@ -36,19 +36,24 @@
                 EndpointSetup<DefaultPublisher>(c =>
                 {
                     c.Conventions().DefiningMessagesAs(t => t.Namespace != null && t.Name.StartsWith("My"));
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyMessage), typeof(ReplyingEndpoint));
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), typeof(ReplyingEndpoint));
                 });
             }
 
             public class ResponseHandler : IHandleMessages<MyReply>
             {
-                public Context Context { get; set; }
+                public ResponseHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(MyReply messageThatIsEnlisted, IMessageHandlerContext context)
                 {
-                    Context.SendingEndpointGotResponse = true;
+                    testContext.SendingEndpointGotResponse = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -61,13 +66,18 @@
 
             public class ResponseHandler : IHandleMessages<MyReply>
             {
-                public Context Context { get; set; }
+                public ResponseHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(MyReply messageThatIsEnlisted, IMessageHandlerContext context)
                 {
-                    Context.OtherEndpointGotResponse = true;
+                    testContext.OtherEndpointGotResponse = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -92,7 +102,9 @@
         {
         }
 
+#pragma warning disable IDE1006 // Naming Styles
         public interface MyReply
+#pragma warning restore IDE1006 // Naming Styles
         {
         }
     }

@@ -19,7 +19,7 @@
                     b.When(c => c.Subscribed, (session, ctx) => session.SendLocal(new StartMessage())))
                 .WithEndpoint<Subscriber>(b => b.When(async (session, ctx) =>
                 {
-                    await session.Subscribe<MyEvent>();
+                    await session.Subscribe<IMyEvent>();
                     if (ctx.HasNativePubSubSupport)
                     {
                         ctx.Subscribed = true;
@@ -29,7 +29,7 @@
                 .Run();
 
             Assert.True(context.GotTheEvent);
-            Assert.AreEqual(typeof(MyEvent), context.EventTypePassedToRouting);
+            Assert.AreEqual(typeof(IMyEvent), context.EventTypePassedToRouting);
         }
 
         public class Context : ScenarioContext
@@ -43,9 +43,9 @@
         {
             public Publisher()
             {
-                EndpointSetup<DefaultPublisher>(c =>
+                EndpointSetup<DefaultPublisher>((c, r) =>
                 {
-                    c.Pipeline.Register("EventTypeSpy", new EventTypeSpy((Context)ScenarioContext), "EventTypeSpy");
+                    c.Pipeline.Register("EventTypeSpy", new EventTypeSpy((Context)r.ScenarioContext), "EventTypeSpy");
                     c.OnEndpointSubscribed<Context>((s, context) =>
                     {
                         if (s.SubscriberEndpoint.Contains(Conventions.EndpointNamingConvention(typeof(Subscriber))))
@@ -58,12 +58,17 @@
 
             public class StartMessageHandler : IHandleMessages<StartMessage>
             {
-                public IMessageCreator MessageCreator { get; set; }
+                public StartMessageHandler(IMessageCreator messageCreator)
+                {
+                    this.messageCreator = messageCreator;
+                }
 
                 public Task Handle(StartMessage message, IMessageHandlerContext context)
                 {
-                    return context.Publish(MessageCreator.CreateInstance<MyEvent>());
+                    return context.Publish(messageCreator.CreateInstance<IMyEvent>());
                 }
+
+                IMessageCreator messageCreator;
             }
 
             class EventTypeSpy : IBehavior<IOutgoingLogicalMessageContext, IOutgoingLogicalMessageContext>
@@ -91,24 +96,29 @@
                     {
                         c.DisableFeature<AutoSubscribe>();
                     },
-                    metadata => metadata.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
+                    metadata => metadata.RegisterPublisherFor<IMyEvent>(typeof(Publisher)));
             }
 
-            public class MyEventHandler : IHandleMessages<MyEvent>
+            public class MyEventHandler : IHandleMessages<IMyEvent>
             {
-                public Context Context { get; set; }
-
-                public Task Handle(MyEvent @event, IMessageHandlerContext context)
+                public MyEventHandler(Context context)
                 {
-                    Context.GotTheEvent = true;
+                    testContext = context;
+                }
+
+                public Task Handle(IMyEvent @event, IMessageHandlerContext context)
+                {
+                    testContext.GotTheEvent = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
         public class StartMessage : IMessage
         {
         }
-        public interface MyEvent : IEvent
+        public interface IMyEvent : IEvent
         {
         }
     }

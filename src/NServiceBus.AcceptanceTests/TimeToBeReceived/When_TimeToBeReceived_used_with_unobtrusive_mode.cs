@@ -1,9 +1,9 @@
 ﻿namespace NServiceBus.AcceptanceTests.TimeToBeReceived
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
-    using AcceptanceTesting.Customization;
     using EndpointTemplates;
     using Features;
     using NUnit.Framework;
@@ -14,8 +14,7 @@
         public async Task Message_should_not_be_received()
         {
             var context = await Scenario.Define<Context>()
-                .WithEndpoint<Sender>()
-                .WithEndpoint<Receiver>()
+                .WithEndpoint<Endpoint>()
                 .Run(TimeSpan.FromSeconds(10));
 
             Assert.IsFalse(context.WasCalled);
@@ -26,30 +25,31 @@
             public bool WasCalled { get; set; }
         }
 
-        class SendMessageWhileStarting : Feature
+        class SendMessageAndDelayStart : Feature
         {
             protected override void Setup(FeatureConfigurationContext context)
             {
-                context.RegisterStartupTask(b => new SendMessageWhileStartingTask());
+                context.RegisterStartupTask(b => new SendMessageAndDelayStartTask());
             }
         }
 
-        class SendMessageWhileStartingTask : FeatureStartupTask
+        class SendMessageAndDelayStartTask : FeatureStartupTask
         {
-            protected override Task OnStart(IMessageSession session)
+            protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
             {
-                return session.Send(new MyCommand());
+                await session.SendLocal(new MyCommand(), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
 
-            protected override Task OnStop(IMessageSession session)
+            protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(0);
             }
         }
 
-        public class Sender : EndpointConfigurationBuilder
+        public class Endpoint : EndpointConfigurationBuilder
         {
-            public Sender()
+            public Endpoint()
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
@@ -63,53 +63,24 @@
                         }
                         return TimeSpan.MaxValue;
                     });
-                    c.EnableFeature<SendMessageWhileStarting>();
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyCommand), typeof(Receiver));
+                    c.EnableFeature<SendMessageAndDelayStart>();
                 }).ExcludeType<MyCommand>(); // remove that type from assembly scanning to simulate what would happen with true unobtrusive mode
-            }
-        }
-
-        class DelayReceiverFromStarting : Feature
-        {
-            protected override void Setup(FeatureConfigurationContext context)
-            {
-                context.RegisterStartupTask(b => new DelayReceiverFromStartingTask());
-            }
-        }
-
-        class DelayReceiverFromStartingTask : FeatureStartupTask
-        {
-            protected override Task OnStart(IMessageSession session)
-            {
-                return Task.Delay(TimeSpan.FromSeconds(5));
-            }
-
-            protected override Task OnStop(IMessageSession session)
-            {
-                return Task.FromResult(0);
-            }
-        }
-
-        public class Receiver : EndpointConfigurationBuilder
-        {
-            public Receiver()
-            {
-                EndpointSetup<DefaultServer>(c =>
-                {
-                    c.Conventions().DefiningCommandsAs(t => t.Namespace != null && t.FullName == typeof(MyCommand).FullName);
-                    c.EnableFeature<DelayReceiverFromStarting>();
-                });
             }
 
             public class MyMessageHandler : IHandleMessages<MyCommand>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyCommand message, IMessageHandlerContext context)
                 {
-                    Context.WasCalled = true;
+                    testContext.WasCalled = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

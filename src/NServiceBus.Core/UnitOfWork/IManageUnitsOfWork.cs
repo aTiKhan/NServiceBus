@@ -1,12 +1,15 @@
 namespace NServiceBus.UnitOfWork
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
 
     /// <summary>
     /// Interface used by NServiceBus to manage units of work as a part of the
     /// message processing pipeline.
     /// </summary>
+    [ObsoleteEx(Message = "The unit of work pattern is more straightforward to implement in a pipeline behavior, where the using keyword and try/catch blocks can be used.", ReplacementTypeOrMember = "NServiceBus.Pipeline.Behavior<TContext>", TreatAsErrorFromVersion = "9", RemoveInVersion = "10")]
+    [SuppressMessage("Code", "PS0018:A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext", Justification = "Obsolete.")]
     public interface IManageUnitsOfWork
     {
         /// <summary>

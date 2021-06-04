@@ -1,6 +1,8 @@
 namespace NServiceBus
 {
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
     using Extensibility;
 
@@ -27,14 +29,14 @@ namespace NServiceBus
         /// <summary>
         /// Override this method in order to configure how this saga's data should be found.
         /// </summary>
-        internal protected abstract void ConfigureHowToFindSaga(IConfigureHowToFindSagaWithMessage sagaMessageFindingConfiguration);
+        protected internal abstract void ConfigureHowToFindSaga(IConfigureHowToFindSagaWithMessage sagaMessageFindingConfiguration);
 
         /// <summary>
         /// Request for a timeout to occur at the given <see cref="DateTime" />.
         /// </summary>
         /// <param name="context">The context which is used to send the timeout.</param>
-        /// <param name="at"><see cref="DateTime" /> to send timeout <typeparamref name="TTimeoutMessageType" />.</param>
-        protected Task RequestTimeout<TTimeoutMessageType>(IMessageHandlerContext context, DateTime at) where TTimeoutMessageType : new()
+        /// <param name="at"><see cref="DateTimeOffset" /> to send timeout <typeparamref name="TTimeoutMessageType" />.</param>
+        protected Task RequestTimeout<TTimeoutMessageType>(IMessageHandlerContext context, DateTimeOffset at) where TTimeoutMessageType : new()
         {
             return RequestTimeout(context, at, new TTimeoutMessageType());
         }
@@ -43,15 +45,10 @@ namespace NServiceBus
         /// Request for a timeout to occur at the given <see cref="DateTime" />.
         /// </summary>
         /// <param name="context">The context which is used to send the timeout.</param>
-        /// <param name="at"><see cref="DateTime" /> to send timeout <paramref name="timeoutMessage" />.</param>
+        /// <param name="at"><see cref="DateTimeOffset" /> to send timeout <paramref name="timeoutMessage" />.</param>
         /// <param name="timeoutMessage">The message to send after <paramref name="at" /> is reached.</param>
-        protected Task RequestTimeout<TTimeoutMessageType>(IMessageHandlerContext context, DateTime at, TTimeoutMessageType timeoutMessage)
+        protected Task RequestTimeout<TTimeoutMessageType>(IMessageHandlerContext context, DateTimeOffset at, TTimeoutMessageType timeoutMessage)
         {
-            if (at.Kind == DateTimeKind.Unspecified)
-            {
-                throw new InvalidOperationException("Kind property of DateTime 'at' must be specified.");
-            }
-
             VerifySagaCanHandleTimeout(timeoutMessage);
 
             var options = new SendOptions();
@@ -97,7 +94,7 @@ namespace NServiceBus
         /// <summary>
         /// Sends the <paramref name="message" /> using the bus to the endpoint that caused this saga to start.
         /// </summary>
-        protected Task ReplyToOriginator(IMessageHandlerContext context, object message)
+        protected Task ReplyToOriginator(IMessageHandlerContext context, object message, IReadOnlyDictionary<string, string> outgoingHeaders = null)
         {
             if (string.IsNullOrEmpty(Entity.Originator))
             {
@@ -105,6 +102,11 @@ namespace NServiceBus
             }
 
             var options = new ReplyOptions();
+
+            foreach (var keyValuePair in outgoingHeaders ?? Enumerable.Empty<KeyValuePair<string, string>>())
+            {
+                options.OutgoingHeaders.Add(keyValuePair.Key, keyValuePair.Value);
+            }
 
             options.SetDestination(Entity.Originator);
             context.Extensions.Set(new AttachCorrelationIdBehavior.State { CustomCorrelationId = Entity.OriginalMessageId });

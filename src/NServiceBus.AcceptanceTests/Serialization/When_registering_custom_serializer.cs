@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Runtime.Serialization.Formatters.Binary;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using Configuration.AdvancedExtensibility;
@@ -39,23 +38,27 @@
         {
             public EndpointWithCustomSerializer()
             {
-                var context = (Context) ScenarioContext;
-                EndpointSetup<DefaultServer>(c =>
+                EndpointSetup<DefaultServer>((c, r) =>
                 {
                     c.UseSerialization<MySuperSerializer>();
-                    c.GetSettings().Set(context);
+                    c.GetSettings().Set((Context)r.ScenarioContext);
                 });
             }
 
             public class MyRequestHandler : IHandleMessages<MyRequest>
             {
-                public Context Context { get; set; }
+                public MyRequestHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyRequest request, IMessageHandlerContext context)
                 {
-                    Context.HandlerGotTheRequest = true;
+                    testContext.HandlerGotTheRequest = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -83,13 +86,14 @@
             {
                 context.SerializeCalled = true;
 
-                var serializer = new BinaryFormatter();
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(MyRequest));
+
                 serializer.Serialize(stream, message);
             }
 
             public object[] Deserialize(Stream stream, IList<Type> messageTypes = null)
             {
-                var serializer = new BinaryFormatter();
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(MyRequest));
 
                 stream.Position = 0;
                 var msg = serializer.Deserialize(stream);

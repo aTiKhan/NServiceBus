@@ -6,17 +6,16 @@
     using System.Linq;
     using System.Threading.Tasks;
     using Logging;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using Sagas;
-    using Transport;
 
     class SagaPersistenceBehavior : IBehavior<IInvokeHandlerContext, IInvokeHandlerContext>
     {
-        public SagaPersistenceBehavior(ISagaPersister persister, ISagaIdGenerator sagaIdGenerator, ICancelDeferredMessages timeoutCancellation, SagaMetadataCollection sagaMetadataCollection)
+        public SagaPersistenceBehavior(ISagaPersister persister, ISagaIdGenerator sagaIdGenerator, SagaMetadataCollection sagaMetadataCollection)
         {
             this.sagaIdGenerator = sagaIdGenerator;
             sagaPersister = persister;
-            this.timeoutCancellation = timeoutCancellation;
             this.sagaMetadataCollection = sagaMetadataCollection;
         }
 
@@ -70,7 +69,7 @@
                 }
             }
 
-            var sagaInstanceState = new ActiveSagaInstance(saga, currentSagaMetadata, () => DateTime.UtcNow);
+            var sagaInstanceState = new ActiveSagaInstance(saga, currentSagaMetadata, () => DateTimeOffset.UtcNow);
 
             //so that other behaviors can access the saga
             context.Extensions.Set(sagaInstanceState);
@@ -126,12 +125,7 @@
             {
                 if (!sagaInstanceState.IsNew)
                 {
-                    await sagaPersister.Complete(saga.Entity, context.SynchronizedStorageSession, context.Extensions).ConfigureAwait(false);
-                }
-
-                if (saga.Entity.Id != Guid.Empty)
-                {
-                    await timeoutCancellation.CancelDeferredMessages(saga.Entity.Id.ToString(), context).ConfigureAwait(false);
+                    await sagaPersister.Complete(saga.Entity, context.SynchronizedStorageSession, context.Extensions, context.CancellationToken).ConfigureAwait(false);
                 }
 
                 logger.DebugFormat("Saga: '{0}' with Id: '{1}' has completed.", sagaInstanceState.Metadata.Name, saga.Entity.Id);
@@ -151,11 +145,11 @@
                         sagaCorrelationProperty = new SagaCorrelationProperty(correlationProperty.PropertyInfo.Name, correlationProperty.PropertyInfo.GetValue(sagaInstanceState.Instance.Entity));
                     }
 
-                    await sagaPersister.Save(saga.Entity, sagaCorrelationProperty, context.SynchronizedStorageSession, context.Extensions).ConfigureAwait(false);
+                    await sagaPersister.Save(saga.Entity, sagaCorrelationProperty, context.SynchronizedStorageSession, context.Extensions, context.CancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
-                    await sagaPersister.Update(saga.Entity, context.SynchronizedStorageSession, context.Extensions).ConfigureAwait(false);
+                    await sagaPersister.Update(saga.Entity, context.SynchronizedStorageSession, context.Extensions, context.CancellationToken).ConfigureAwait(false);
                 }
 
                 sagaInstanceState.Updated();
@@ -221,7 +215,7 @@
                 return false;
             }
 
-            if (headers.TryGetValue(TimeoutManagerHeaders.Expire, out var expire))
+            if (headers.TryGetValue("NServiceBus.Timeout.Expire", out var expire))
             {
                 if (string.IsNullOrEmpty(expire))
                 {
@@ -248,7 +242,7 @@
 
                 var loader = (SagaLoader)Activator.CreateInstance(loaderType);
 
-                return loader.Load(sagaPersister, sagaId, context.SynchronizedStorageSession, context.Extensions);
+                return loader.Load(sagaPersister, sagaId, context.SynchronizedStorageSession, context.Extensions, context.CancellationToken);
             }
 
             var finderDefinition = GetSagaFinder(metadata, context);
@@ -260,9 +254,9 @@
             }
 
             var finderType = finderDefinition.Type;
-            var finder = (SagaFinder)context.Builder.Build(finderType);
+            var finder = (SagaFinder)context.Builder.GetRequiredService(finderType);
 
-            return finder.Find(context.Builder, finderDefinition, context.SynchronizedStorageSession, context.Extensions, context.MessageBeingHandled);
+            return finder.Find(context.Builder, finderDefinition, context.SynchronizedStorageSession, context.Extensions, context.MessageBeingHandled, context.MessageHeaders, context.CancellationToken);
         }
 
         SagaFinderDefinition GetSagaFinder(SagaMetadata metadata, IInvokeHandlerContext context)
@@ -319,7 +313,6 @@
 
         readonly SagaMetadataCollection sagaMetadataCollection;
         readonly ISagaPersister sagaPersister;
-        readonly ICancelDeferredMessages timeoutCancellation;
         readonly ISagaIdGenerator sagaIdGenerator;
 
         static readonly Task<IContainSagaData> DefaultSagaDataCompletedTask = Task.FromResult(default(IContainSagaData));

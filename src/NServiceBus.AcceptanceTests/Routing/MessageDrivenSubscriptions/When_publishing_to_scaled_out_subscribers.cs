@@ -8,7 +8,7 @@
 
     public class When_publishing_to_scaled_out_subscribers : NServiceBusAcceptanceTest
     {
-       [Test]
+        [Test]
         public async Task Each_event_should_be_delivered_to_single_instance_of_each_subscriber()
         {
             Requires.MessageDrivenPubSub();
@@ -72,13 +72,18 @@
 
             public class MyEventHandler : IHandleMessages<MyEvent>
             {
-                public Context Context { get; set; }
+                public MyEventHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyEvent message, IMessageHandlerContext context)
                 {
-                    Context.IncrementA();
+                    testContext.IncrementA();
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -91,13 +96,18 @@
 
             public class MyEventHandler : IHandleMessages<MyEvent>
             {
-                public Context Context { get; set; }
+                public MyEventHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyEvent message, IMessageHandlerContext context)
                 {
-                    Context.IncrementB();
+                    testContext.IncrementB();
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

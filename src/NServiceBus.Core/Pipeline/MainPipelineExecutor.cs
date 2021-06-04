@@ -1,14 +1,15 @@
 namespace NServiceBus
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
-    using ObjectBuilder;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using Transport;
 
     class MainPipelineExecutor : IPipelineExecutor
     {
-        public MainPipelineExecutor(IBuilder rootBuilder, IPipelineCache pipelineCache, MessageOperations messageOperations, INotificationSubscriptions<ReceivePipelineCompleted> receivePipelineNotification, Pipeline<ITransportReceiveContext> receivePipeline)
+        public MainPipelineExecutor(IServiceProvider rootBuilder, IPipelineCache pipelineCache, MessageOperations messageOperations, INotificationSubscriptions<ReceivePipelineCompleted> receivePipelineNotification, Pipeline<ITransportReceiveContext> receivePipeline)
         {
             this.rootBuilder = rootBuilder;
             this.pipelineCache = pipelineCache;
@@ -17,39 +18,44 @@ namespace NServiceBus
             this.receivePipeline = receivePipeline;
         }
 
-        public async Task Invoke(MessageContext messageContext)
+        public async Task Invoke(MessageContext messageContext, CancellationToken cancellationToken = default)
         {
-            var pipelineStartedAt = DateTime.UtcNow;
+            var pipelineStartedAt = DateTimeOffset.UtcNow;
 
-            using (var childBuilder = rootBuilder.CreateChildBuilder())
+            using (var childScope = rootBuilder.CreateScope())
             {
-                var message = new IncomingMessage(messageContext.MessageId, messageContext.Headers, messageContext.Body);
+                var message = new IncomingMessage(messageContext.NativeMessageId, messageContext.Headers, messageContext.Body);
 
-                var rootContext = new RootContext(childBuilder, messageOperations, pipelineCache);
+                var rootContext = new RootContext(childScope.ServiceProvider, messageOperations, pipelineCache, cancellationToken);
                 rootContext.Extensions.Merge(messageContext.Extensions);
 
-                var transportReceiveContext = new TransportReceiveContext(message, messageContext.TransportTransaction, messageContext.ReceiveCancellationTokenSource, rootContext);
+                var transportReceiveContext = new TransportReceiveContext(message, messageContext.TransportTransaction, rootContext);
 
                 try
                 {
                     await receivePipeline.Invoke(transportReceiveContext).ConfigureAwait(false);
                 }
-                catch (Exception e)
+#pragma warning disable PS0019 // Do not catch Exception without considering OperationCanceledException - enriching and rethrowing
+                catch (Exception ex)
+#pragma warning restore PS0019 // Do not catch Exception without considering OperationCanceledException
                 {
-                    e.Data["Message ID"] = message.MessageId;
+                    ex.Data["Message ID"] = message.MessageId;
+
                     if (message.NativeMessageId != message.MessageId)
                     {
-                        e.Data["Transport message ID"] = message.NativeMessageId;
+                        ex.Data["Transport message ID"] = message.NativeMessageId;
                     }
+
+                    ex.Data["Pipeline canceled"] = transportReceiveContext.CancellationToken.IsCancellationRequested;
 
                     throw;
                 }
 
-                await receivePipelineNotification.Raise(new ReceivePipelineCompleted(message, pipelineStartedAt, DateTime.UtcNow)).ConfigureAwait(false);
+                await receivePipelineNotification.Raise(new ReceivePipelineCompleted(message, pipelineStartedAt, DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
             }
         }
 
-        readonly IBuilder rootBuilder;
+        readonly IServiceProvider rootBuilder;
         readonly IPipelineCache pipelineCache;
         readonly MessageOperations messageOperations;
         readonly INotificationSubscriptions<ReceivePipelineCompleted> receivePipelineNotification;

@@ -3,6 +3,7 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using MessageMutator;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
     using Testing;
 
@@ -19,7 +20,7 @@
 
             var context = new TestableIncomingPhysicalMessageContext();
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.True(mutator.MutateIncomingCalled);
             Assert.True(otherMutator.MutateIncomingCalled);
@@ -34,9 +35,9 @@
             var behavior = new MutateIncomingTransportMessageBehavior(new HashSet<IMutateIncomingTransportMessages> { explicitMutator });
 
             var context = new TestableIncomingPhysicalMessageContext();
-            context.Builder.Register<IMutateIncomingTransportMessages>(() => containerMutator);
+            context.Services.AddTransient<IMutateIncomingTransportMessages>(sp => containerMutator);
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.True(explicitMutator.MutateIncomingCalled);
             Assert.True(containerMutator.MutateIncomingCalled);
@@ -49,12 +50,12 @@
 
             var context = new TestableIncomingPhysicalMessageContext();
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             var mutator = new MutatorThatIndicatesIfItWasCalled();
-            context.Builder.Register<IMutateIncomingTransportMessages>(() => mutator);
+            context.Services.AddTransient<IMutateIncomingTransportMessages>(sp => mutator);
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.IsFalse(mutator.MutateIncomingCalled);
         }
@@ -66,9 +67,9 @@
 
             var context = new TestableIncomingPhysicalMessageContext();
 
-            context.Builder.Register<IMutateIncomingTransportMessages>(() => new MutateIncomingTransportMessagesReturnsNull());
+            context.Services.AddTransient<IMutateIncomingTransportMessages>(sp => new MutateIncomingTransportMessagesReturnsNull());
 
-            Assert.That(async () => await behavior.Invoke(context, ctx => TaskEx.CompletedTask), Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
+            Assert.That(async () => await behavior.Invoke(context, ctx => Task.CompletedTask), Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
         }
 
         [Test]
@@ -78,9 +79,9 @@
 
             var context = new InterceptUpdateMessageIncomingPhysicalMessageContext();
 
-            context.Builder.Register<IMutateIncomingTransportMessages>(() => new MutatorWhichDoesNotMutateTheBody());
+            context.Services.AddTransient<IMutateIncomingTransportMessages>(sp => new MutatorWhichDoesNotMutateTheBody());
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.False(context.UpdateMessageBodyCalled);
         }
@@ -92,9 +93,9 @@
 
             var context = new InterceptUpdateMessageIncomingPhysicalMessageContext();
 
-            context.Builder.Register(() => new IMutateIncomingTransportMessages[]{ });
+            context.Services.AddTransient(sp => new IMutateIncomingTransportMessages[] { });
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.False(context.UpdateMessageBodyCalled);
         }
@@ -106,9 +107,9 @@
 
             var context = new InterceptUpdateMessageIncomingPhysicalMessageContext();
 
-            context.Builder.Register<IMutateIncomingTransportMessages>(() => new MutatorWhichMutatesTheBody());
+            context.Services.AddTransient<IMutateIncomingTransportMessages>(sp => new MutatorWhichMutatesTheBody());
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.True(context.UpdateMessageBodyCalled);
         }
@@ -133,7 +134,7 @@
             {
                 MutateIncomingCalled = true;
 
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -149,7 +150,7 @@
         {
             public Task MutateIncoming(MutateIncomingTransportMessageContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -159,7 +160,7 @@
             {
                 context.Body = new byte[0];
 
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
     }

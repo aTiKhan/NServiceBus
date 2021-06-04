@@ -48,7 +48,7 @@
                     var basePath = Path.Combine(TestContext.CurrentContext.TestDirectory, "databus", "sender");
                     builder.UseDataBus<FileShareDataBus>().BasePath(basePath);
 
-                    builder.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(Receiver));
+                    builder.ConfigureRouting().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(Receiver));
                 }).ExcludeType<MyMessageWithLargePayload>(); // remove that type from assembly scanning to simulate what would happen with true unobtrusive mode
             }
         }
@@ -71,14 +71,19 @@
 
             public class MyMessageHandler : IHandleMessages<MyMessageWithLargePayload>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyMessageWithLargePayload messageWithLargePayload, IMessageHandlerContext context)
                 {
-                    Context.ReceivedPayload = messageWithLargePayload.Payload;
+                    testContext.ReceivedPayload = messageWithLargePayload.Payload;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

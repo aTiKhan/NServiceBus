@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_deferring_a_message : NServiceBusAcceptanceTest
@@ -12,7 +11,9 @@
         [Test]
         public async Task Should_delay_delivery()
         {
-            var delay = TimeSpan.FromSeconds(2);
+            Requires.DelayedDelivery();
+
+            var delay = TimeSpan.FromSeconds(5); // High value needed as most transports have multi second delay latency by default
 
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.When((session, c) =>
@@ -22,40 +23,46 @@
                     options.DelayDeliveryWith(delay);
                     options.RouteToThisEndpoint();
 
-                    c.SentAt = DateTime.UtcNow;
+                    c.SentAt = DateTimeOffset.UtcNow;
 
                     return session.Send(new MyMessage(), options);
                 }))
                 .Done(c => c.WasCalled)
                 .Run();
 
-            Assert.GreaterOrEqual(context.ReceivedAt - context.SentAt, delay);
+            var sendReceiveDifference = context.ReceivedAt - context.SentAt;
+            Assert.GreaterOrEqual(sendReceiveDifference, delay);
         }
 
         public class Context : ScenarioContext
         {
             public bool WasCalled { get; set; }
-            public DateTime SentAt { get; set; }
-            public DateTime ReceivedAt { get; set; }
+            public DateTimeOffset SentAt { get; set; }
+            public DateTimeOffset ReceivedAt { get; set; }
         }
 
         public class Endpoint : EndpointConfigurationBuilder
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
                 {
-                    Context.ReceivedAt = DateTime.UtcNow;
-                    Context.WasCalled = true;
+                    testContext.ReceivedAt = DateTimeOffset.UtcNow;
+                    testContext.WasCalled = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

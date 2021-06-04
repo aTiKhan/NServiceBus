@@ -57,7 +57,7 @@
                     b.OnEndpointSubscribed<Context>((args, context) =>
                     {
                         context.AddTrace("Publisher1 OnEndpointSubscribed " + args.MessageType);
-                        if (args.MessageType.Contains(typeof(IMyEvent).Name))
+                        if (args.MessageType.Contains(nameof(When_multi_subscribing_to_a_polymorphic_event.IMyEvent)))
                         {
                             context.Publisher1HasASubscriberForIMyEvent = true;
                         }
@@ -79,7 +79,7 @@
                     {
                         context.AddTrace("Publisher2 OnEndpointSubscribed " + args.MessageType);
 
-                        if (args.MessageType.Contains(typeof(MyEvent2).Name))
+                        if (args.MessageType.Contains(nameof(When_multi_subscribing_to_a_polymorphic_event.MyEvent2)))
                         {
                             context.Publisher2HasDetectedASubscriberForEvent2 = true;
                         }
@@ -102,22 +102,27 @@
 
             public class MyEventHandler : IHandleMessages<IMyEvent>
             {
-                public Context Context { get; set; }
+                public MyEventHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(IMyEvent messageThatIsEnlisted, IMessageHandlerContext context)
                 {
-                    Context.AddTrace($"Got event '{messageThatIsEnlisted}'");
+                    testContext.AddTrace($"Got event '{messageThatIsEnlisted}'");
                     if (messageThatIsEnlisted is MyEvent2)
                     {
-                        Context.SubscriberGotMyEvent2 = true;
+                        testContext.SubscriberGotMyEvent2 = true;
                     }
                     else
                     {
-                        Context.SubscriberGotIMyEvent = true;
+                        testContext.SubscriberGotIMyEvent = true;
                     }
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

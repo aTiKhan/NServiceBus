@@ -1,31 +1,28 @@
 namespace NServiceBus
 {
     using System;
-#if NETSTANDARD
     using System.Runtime.InteropServices;
-#endif
     using System.Security.Principal;
+    using System.Threading;
     using System.Threading.Tasks;
-    using ObjectBuilder;
     using Settings;
-    using Transport;
 
     class StartableEndpoint : IStartableEndpoint
     {
         public StartableEndpoint(SettingsHolder settings,
             FeatureComponent featureComponent,
             ReceiveComponent receiveComponent,
-            TransportInfrastructure transportInfrastructure,
+            TransportSeam transportSeam,
             PipelineComponent pipelineComponent,
             RecoverabilityComponent recoverabilityComponent,
             HostingComponent hostingComponent,
             SendComponent sendComponent,
-            IBuilder builder)
+            IServiceProvider builder)
         {
             this.settings = settings;
             this.featureComponent = featureComponent;
             this.receiveComponent = receiveComponent;
-            this.transportInfrastructure = transportInfrastructure;
+            this.transportSeam = transportSeam;
             this.pipelineComponent = pipelineComponent;
             this.recoverabilityComponent = recoverabilityComponent;
             this.hostingComponent = hostingComponent;
@@ -33,37 +30,29 @@ namespace NServiceBus
             this.builder = builder;
         }
 
-        public async Task<IEndpointInstance> Start()
+        public async Task<IEndpointInstance> Start(CancellationToken cancellationToken = default)
         {
-            await receiveComponent.ReceivePreStartupChecks().ConfigureAwait(false);
-
-            await transportInfrastructure.Start().ConfigureAwait(false);
-            // This is a hack to maintain the current order of transport infrastructure initialization
-            sendComponent.ConfigureSendInfrastructureForBackwardsCompatibility();
+            var transportInfrastructure = await transportSeam.CreateTransportInfrastructure(cancellationToken).ConfigureAwait(false);
 
             var pipelineCache = pipelineComponent.BuildPipelineCache(builder);
             var messageOperations = sendComponent.CreateMessageOperations(builder, pipelineComponent);
-            var rootContext = new RootContext(builder, messageOperations, pipelineCache);
+            var stoppingTokenSource = new CancellationTokenSource();
+
+            var rootContext = new RootContext(builder, messageOperations, pipelineCache, stoppingTokenSource.Token);
             var messageSession = new MessageSession(rootContext);
 
-#if NETSTANDARD
+            await receiveComponent.Initialize(builder, recoverabilityComponent, messageOperations, pipelineComponent, pipelineCache, transportInfrastructure, cancellationToken).ConfigureAwait(false);
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                 AppDomain.CurrentDomain.SetPrincipalPolicy(PrincipalPolicy.WindowsPrincipal);
+                AppDomain.CurrentDomain.SetPrincipalPolicy(PrincipalPolicy.WindowsPrincipal);
             }
-#else
-            AppDomain.CurrentDomain.SetPrincipalPolicy(PrincipalPolicy.WindowsPrincipal);
-#endif
-            await receiveComponent.PrepareToStart(builder, recoverabilityComponent, messageOperations, pipelineComponent, pipelineCache).ConfigureAwait(false);
 
-            // This is a hack to maintain the current order of transport infrastructure initialization
-            await sendComponent.InvokeSendPreStartupChecksForBackwardsCompatibility().ConfigureAwait(false);
+            await featureComponent.Start(builder, messageSession, cancellationToken).ConfigureAwait(false);
 
-            await featureComponent.Start(builder, messageSession).ConfigureAwait(false);
+            var runningInstance = new RunningEndpointInstance(settings, hostingComponent, receiveComponent, featureComponent, messageSession, transportInfrastructure, stoppingTokenSource);
 
-            var runningInstance = new RunningEndpointInstance(settings, hostingComponent, receiveComponent, featureComponent, messageSession, transportInfrastructure);
-
-            await receiveComponent.Start().ConfigureAwait(false);
+            await receiveComponent.Start(cancellationToken).ConfigureAwait(false);
 
             return runningInstance;
         }
@@ -72,10 +61,10 @@ namespace NServiceBus
         readonly RecoverabilityComponent recoverabilityComponent;
         readonly HostingComponent hostingComponent;
         readonly SendComponent sendComponent;
-        readonly IBuilder builder;
+        readonly IServiceProvider builder;
         readonly FeatureComponent featureComponent;
         readonly SettingsHolder settings;
         readonly ReceiveComponent receiveComponent;
-        readonly TransportInfrastructure transportInfrastructure;
+        readonly TransportSeam transportSeam;
     }
 }

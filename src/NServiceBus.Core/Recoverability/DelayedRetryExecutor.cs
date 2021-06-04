@@ -2,59 +2,43 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using DelayedDelivery;
-    using DeliveryConstraints;
-    using Extensibility;
     using Routing;
     using Transport;
 
     class DelayedRetryExecutor
     {
-        public DelayedRetryExecutor(string endpointInputQueue, IDispatchMessages dispatcher, string timeoutManagerAddress = null)
+        public DelayedRetryExecutor(string endpointInputQueue, IMessageDispatcher dispatcher)
         {
-            this.timeoutManagerAddress = timeoutManagerAddress;
             this.dispatcher = dispatcher;
             this.endpointInputQueue = endpointInputQueue;
         }
 
-        public async Task<int> Retry(IncomingMessage message, TimeSpan delay, TransportTransaction transportTransaction)
+        public async Task<int> Retry(IncomingMessage message, TimeSpan delay, TransportTransaction transportTransaction, CancellationToken cancellationToken = default)
         {
             var outgoingMessage = new OutgoingMessage(message.MessageId, new Dictionary<string, string>(message.Headers), message.Body);
 
             var currentDelayedRetriesAttempt = message.GetDelayedDeliveriesPerformed() + 1;
 
             outgoingMessage.SetCurrentDelayedDeliveries(currentDelayedRetriesAttempt);
-            outgoingMessage.SetDelayedDeliveryTimestamp(DateTime.UtcNow);
+            outgoingMessage.SetDelayedDeliveryTimestamp(DateTimeOffset.UtcNow);
 
-            UnicastAddressTag messageDestination;
-            List<DeliveryConstraint> deliveryConstraints = null;
-            if (timeoutManagerAddress == null)
+            var dispatchProperties = new DispatchProperties
             {
-                // transport supports native deferred messages, directly send to input queue with delay constraint:
-                deliveryConstraints = new List<DeliveryConstraint>(1)
-                {
-                    new DelayDeliveryWith(delay)
-                };
-                messageDestination = new UnicastAddressTag(endpointInputQueue);
-            }
-            else
-            {
-                // transport doesn't support native deferred messages, reroute to timeout manager:
-                outgoingMessage.Headers[TimeoutManagerHeaders.RouteExpiredTimeoutTo] = endpointInputQueue;
-                outgoingMessage.Headers[TimeoutManagerHeaders.Expire] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow + delay);
-                messageDestination = new UnicastAddressTag(timeoutManagerAddress);
-            }
+                DelayDeliveryWith = new DelayDeliveryWith(delay)
+            };
+            var messageDestination = new UnicastAddressTag(endpointInputQueue);
 
-            var transportOperations = new TransportOperations(new TransportOperation(outgoingMessage, messageDestination, deliveryConstraints: deliveryConstraints));
+            var transportOperations = new TransportOperations(new TransportOperation(outgoingMessage, messageDestination, dispatchProperties));
 
-            await dispatcher.Dispatch(transportOperations, transportTransaction, new ContextBag()).ConfigureAwait(false);
+            await dispatcher.Dispatch(transportOperations, transportTransaction, cancellationToken).ConfigureAwait(false);
 
             return currentDelayedRetriesAttempt;
         }
 
-        IDispatchMessages dispatcher;
+        IMessageDispatcher dispatcher;
         string endpointInputQueue;
-        string timeoutManagerAddress;
     }
 }

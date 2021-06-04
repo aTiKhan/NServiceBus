@@ -27,21 +27,25 @@ namespace NServiceBus.AcceptanceTests.Core.Diagnostics
                 EndpointSetup<DefaultServer>((c, d) =>
                 {
                     c.OverrideLocalAddress("OverriddenInputQueue");
-                    c.EnableFeature<TimeoutManager>();
                 });
             }
         }
 
         public class MyMessageHandler : IHandleMessages<MyMessage>
         {
-            public Context Context { get; set; }
+            public MyMessageHandler(Context context)
+            {
+                testContext = context;
+            }
 
             public Task Handle(MyMessage message, IMessageHandlerContext context)
             {
-                Context.InputQueue = context.MessageHeaders[Headers.ReplyToAddress];
-                Context.Done = true;
+                testContext.InputQueue = context.MessageHeaders[Headers.ReplyToAddress];
+                testContext.Done = true;
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
 
         public class Context : ScenarioContext

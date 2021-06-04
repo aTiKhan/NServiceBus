@@ -9,7 +9,7 @@
     public class When_a_persistence_does_not_support_saga : NServiceBusAcceptanceTest
     {
         [Test]
-        public void should_throw_exception()
+        public void Should_throw_exception()
         {
             Assert.That(async () =>
             {
@@ -26,12 +26,8 @@
             {
                 EndpointSetup<ServerWithNoDefaultPersistenceDefinitions>(c =>
                 {
-                    c.UsePersistence<InMemoryPersistence, StorageType.Timeouts>();
-#pragma warning disable 0618
-                    c.UsePersistence<InMemoryPersistence, StorageType.GatewayDeduplication>();
-#pragma warning restore 0618
-                    c.UsePersistence<InMemoryPersistence, StorageType.Outbox>();
-                    c.UsePersistence<InMemoryPersistence, StorageType.Subscriptions>();
+                    c.UsePersistence<AcceptanceTestingPersistence, StorageType.Outbox>();
+                    c.UsePersistence<AcceptanceTestingPersistence, StorageType.Subscriptions>();
                 });
             }
         }

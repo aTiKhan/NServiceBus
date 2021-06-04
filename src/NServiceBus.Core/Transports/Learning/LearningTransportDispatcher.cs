@@ -5,14 +5,11 @@ namespace NServiceBus
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
-    using DelayedDelivery;
-    using DeliveryConstraints;
-    using Extensibility;
-    using Performance.TimeToBeReceived;
     using Transport;
 
-    class LearningTransportDispatcher : IDispatchMessages
+    class LearningTransportDispatcher : IMessageDispatcher
     {
         public LearningTransportDispatcher(string basePath, int maxMessageSizeKB)
         {
@@ -25,25 +22,25 @@ namespace NServiceBus
             this.maxMessageSizeKB = maxMessageSizeKB;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
         {
             return Task.WhenAll(
-                DispatchUnicast(outgoingMessages.UnicastTransportOperations, transaction),
-                DispatchMulticast(outgoingMessages.MulticastTransportOperations, transaction));
+                DispatchUnicast(outgoingMessages.UnicastTransportOperations, transaction, cancellationToken),
+                DispatchMulticast(outgoingMessages.MulticastTransportOperations, transaction, cancellationToken));
         }
 
-        async Task DispatchMulticast(IEnumerable<MulticastTransportOperation> transportOperations, TransportTransaction transaction)
+        async Task DispatchMulticast(IEnumerable<MulticastTransportOperation> transportOperations, TransportTransaction transaction, CancellationToken cancellationToken)
         {
             var tasks = new List<Task>();
 
             foreach (var transportOperation in transportOperations)
             {
-                var subscribers = await GetSubscribersFor(transportOperation.MessageType)
+                var subscribers = await GetSubscribersFor(transportOperation.MessageType, cancellationToken)
                     .ConfigureAwait(false);
 
                 foreach (var subscriber in subscribers)
                 {
-                    tasks.Add(WriteMessage(subscriber, transportOperation, transaction));
+                    tasks.Add(WriteMessage(subscriber, transportOperation, transaction, cancellationToken));
                 }
             }
 
@@ -51,17 +48,17 @@ namespace NServiceBus
                 .ConfigureAwait(false);
         }
 
-        Task DispatchUnicast(IEnumerable<UnicastTransportOperation> operations, TransportTransaction transaction)
+        Task DispatchUnicast(IEnumerable<UnicastTransportOperation> operations, TransportTransaction transaction, CancellationToken cancellationToken)
         {
             return Task.WhenAll(operations.Select(operation =>
             {
                 PathChecker.ThrowForBadPath(operation.Destination, "message destination");
 
-                return WriteMessage(operation.Destination, operation, transaction);
+                return WriteMessage(operation.Destination, operation, transaction, cancellationToken);
             }));
         }
 
-        async Task WriteMessage(string destination, IOutgoingTransportOperation transportOperation, TransportTransaction transaction)
+        async Task WriteMessage(string destination, IOutgoingTransportOperation transportOperation, TransportTransaction transaction, CancellationToken cancellationToken)
         {
             var message = transportOperation.Message;
 
@@ -73,18 +70,18 @@ namespace NServiceBus
 
             var bodyPath = Path.Combine(bodyDir, nativeMessageId) + LearningTransportMessagePump.BodyFileSuffix;
 
-            await AsyncFile.WriteBytes(bodyPath, message.Body)
+            await AsyncFile.WriteBytes(bodyPath, message.Body, cancellationToken)
                 .ConfigureAwait(false);
 
-            DateTime? timeToDeliver = null;
+            DateTimeOffset? timeToDeliver = null;
 
-            if (transportOperation.DeliveryConstraints.TryGet(out DoNotDeliverBefore doNotDeliverBefore))
+            if (transportOperation.Properties.DoNotDeliverBefore != null)
             {
-                timeToDeliver = doNotDeliverBefore.At;
+                timeToDeliver = transportOperation.Properties.DoNotDeliverBefore.At.ToUniversalTime();
             }
-            else if (transportOperation.DeliveryConstraints.TryGet(out DelayDeliveryWith delayDeliveryWith))
+            else if (transportOperation.Properties.DelayDeliveryWith != null)
             {
-                timeToDeliver = DateTime.UtcNow + delayDeliveryWith.Delay;
+                timeToDeliver = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
             }
 
             if (timeToDeliver.HasValue)
@@ -101,7 +98,9 @@ namespace NServiceBus
                 Directory.CreateDirectory(destinationPath);
             }
 
-            if (transportOperation.DeliveryConstraints.TryGet(out DiscardIfNotReceivedBefore timeToBeReceived) && timeToBeReceived.MaxTime < TimeSpan.MaxValue)
+            var timeToBeReceived = transportOperation.Properties.DiscardIfNotReceivedBefore;
+
+            if (timeToBeReceived != null && timeToBeReceived.MaxTime < TimeSpan.MaxValue)
             {
                 if (timeToDeliver.HasValue)
                 {
@@ -123,18 +122,18 @@ namespace NServiceBus
 
             if (transportOperation.RequiredDispatchConsistency != DispatchConsistency.Isolated && transaction.TryGet(out ILearningTransportTransaction directoryBasedTransaction))
             {
-                await directoryBasedTransaction.Enlist(messagePath, headerPayload)
+                await directoryBasedTransaction.Enlist(messagePath, headerPayload, cancellationToken)
                     .ConfigureAwait(false);
             }
             else
             {
                 // atomic avoids the file being locked when the receiver tries to process it
-                await AsyncFile.WriteTextAtomic(messagePath, headerPayload)
+                await AsyncFile.WriteTextAtomic(messagePath, headerPayload, cancellationToken)
                     .ConfigureAwait(false);
             }
         }
 
-        async Task<IEnumerable<string>> GetSubscribersFor(Type messageType)
+        async Task<IEnumerable<string>> GetSubscribersFor(Type messageType, CancellationToken cancellationToken)
         {
             var subscribers = new HashSet<string>();
 
@@ -151,7 +150,7 @@ namespace NServiceBus
 
                 foreach (var file in Directory.GetFiles(eventDir))
                 {
-                    var allText = await AsyncFile.ReadText(file)
+                    var allText = await AsyncFile.ReadText(file, cancellationToken)
                         .ConfigureAwait(false);
 
                     subscribers.Add(allText);

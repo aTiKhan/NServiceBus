@@ -7,7 +7,7 @@ namespace NServiceBus.Serializers.XML.Test
     using System.Xml.Linq;
     using NUnit.Framework;
 
-    
+
     public class MessageWithArray
     {
         public Guid SagaId { get; set; }
@@ -20,14 +20,14 @@ namespace NServiceBus.Serializers.XML.Test
         }
     }
 
-    
+
     public class MessageWithArrayAndNoDefaultCtor
     {
         public Guid SagaId { get; set; }
         public string[] SomeWords { get; set; }
     }
 
-    
+
     public class MessageWithNullableArray
     {
         public Guid SagaId { get; set; }
@@ -250,7 +250,6 @@ namespace NServiceBus.Serializers.XML.Test
         public void CanSerializeMessageWithNullableArray()
         {
             // Issue https://github.com/Particular/NServiceBus/issues/2706
-
             var message = new MessageWithNullableArray
             {
                 SomeInts = new int?[] { null, 1, null, 3, null }

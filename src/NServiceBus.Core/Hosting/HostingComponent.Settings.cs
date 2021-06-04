@@ -3,9 +3,9 @@
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Threading;
     using System.Threading.Tasks;
-    using ObjectBuilder;
-    using ObjectBuilder.Common;
+    using Microsoft.Extensions.DependencyInjection;
     using Settings;
     using Support;
 
@@ -43,10 +43,7 @@
                 set { settings.Set(DisplayNameSettingsKey, value); }
             }
 
-            public string EndpointName
-            {
-                get { return settings.EndpointName(); }
-            }
+            public string EndpointName => settings.EndpointName();
 
             public Dictionary<string, string> Properties
             {
@@ -66,21 +63,19 @@
                 set { settings.Set(DiagnosticsPathSettingsKey, value); }
             }
 
-            public Func<string, Task> HostDiagnosticsWriter
+            public Func<string, CancellationToken, Task> HostDiagnosticsWriter
             {
-                get { return settings.GetOrDefault<Func<string, Task>>(HostDiagnosticsWriterSettingsKey); }
+                get { return settings.GetOrDefault<Func<string, CancellationToken, Task>>(HostDiagnosticsWriterSettingsKey); }
                 set { settings.Set(HostDiagnosticsWriterSettingsKey, value); }
             }
 
-            public Func<ICriticalErrorContext, Task> CustomCriticalErrorAction
+            public Func<ICriticalErrorContext, CancellationToken, Task> CustomCriticalErrorAction
             {
-                get { return settings.GetOrDefault<Func<ICriticalErrorContext, Task>>(CustomCriticalErrorActionSettingsKey); }
+                get { return settings.GetOrDefault<Func<ICriticalErrorContext, CancellationToken, Task>>(CustomCriticalErrorActionSettingsKey); }
                 set { settings.Set(CustomCriticalErrorActionSettingsKey, value); }
             }
 
-            public List<Action<IConfigureComponents>> UserRegistrations { get; } = new List<Action<IConfigureComponents>>();
-
-            public IContainer CustomObjectBuilder { get; set; }
+            public List<Action<IServiceCollection>> UserRegistrations { get; } = new List<Action<IServiceCollection>>();
 
             public string InstallationUserName
             {
@@ -94,19 +89,16 @@
                 set => settings.Set("Installers.Enable", value);
             }
 
-            // Since the host id default is using MD5 which breaks MIPS compliant users we need to delay setting the default until users have a chance to override
-            // via a custom feature to be backwards compatible.
-            // For more details see the test: When_feature_overrides_hostid_from_feature_default
-            // When this is removed in v8 downstreams can no longer rely on the setting to always be there
-            [ObsoleteEx(RemoveInVersion = "8", TreatAsErrorFromVersion = "7")]
-            internal void ApplyHostIdDefaultIfNeededForV7BackwardsCompatibility()
+            internal void ApplyHostIdDefaultIfNeeded()
             {
+                // We don't want to do settings.SetDefault() all the time, because the default uses MD5 which runs afoul of FIPS in such a way that cannot be worked around.
+                // Changing the default implementation to a FIPS-compliant cipher would cause all users to get duplicates of every endpoint instance in ServicePulse.
                 if (settings.HasExplicitValue(HostIdSettingsKey))
                 {
                     return;
                 }
 
-                settings.SetDefault(HostIdSettingsKey, DeterministicGuid.Create(fullPathToStartingExe, RuntimeEnvironment.MachineName));
+                settings.Set(HostIdSettingsKey, DeterministicGuid.Create(fullPathToStartingExe, RuntimeEnvironment.MachineName));
             }
 
             SettingsHolder settings;

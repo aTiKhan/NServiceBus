@@ -6,9 +6,9 @@
     using System.Threading.Tasks;
     using NServiceBus.Pipeline;
     using NServiceBus.Routing;
-    using Transport;
     using NUnit.Framework;
     using Testing;
+    using Transport;
 
     [TestFixture]
     public class RoutingToDispatchConnectorTests
@@ -21,7 +21,7 @@
             await behavior.Invoke(new TestableRoutingContext { RoutingStrategies = new List<RoutingStrategy> { new CustomRoutingStrategy() } }, context =>
                 {
                     headers = context.Operations.First().Message.Headers;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 });
 
             Assert.IsTrue(headers.ContainsKey("CustomHeader"));
@@ -41,7 +41,7 @@
                 new UnicastRoutingStrategy("Destination"), CreateContext(options, true)), c =>
                 {
                     dispatched = true;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 });
 
             Assert.IsTrue(dispatched);
@@ -58,7 +58,7 @@
                 new UnicastRoutingStrategy("Destination"), CreateContext(new SendOptions(), false)), c =>
                 {
                     dispatched = true;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 });
 
             Assert.IsTrue(dispatched);
@@ -75,7 +75,7 @@
                 new UnicastRoutingStrategy("Destination"), CreateContext(new SendOptions(), true)), c =>
                 {
                     dispatched = true;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 });
 
             Assert.IsFalse(dispatched);

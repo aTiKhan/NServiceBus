@@ -56,8 +56,13 @@
 
                 foreach (var item in messages.Values)
                 {
-                    if (item.MessageType.FullName == messageTypeIdentifier)
+                    var messageTypeFullName = GetMessageTypeNameWithoutAssembly(messageTypeIdentifier);
+
+                    if (item.MessageType.FullName == messageTypeIdentifier ||
+                        item.MessageType.FullName == messageTypeFullName)
                     {
+                        Logger.DebugFormat("Message type: '{0}' was mapped to '{1}'", messageTypeIdentifier, item.MessageType.AssemblyQualifiedName);
+
                         cachedTypes[messageTypeIdentifier] = item.MessageType;
                         return item;
                     }
@@ -80,11 +85,31 @@
             return null;
         }
 
+        string GetMessageTypeNameWithoutAssembly(string messageTypeIdentifier)
+        {
+            var typeParts = messageTypeIdentifier.Split(',');
+            if (typeParts.Length > 1)
+            {
+                return typeParts[0]; //Take the type part only
+            }
+
+            return messageTypeIdentifier;
+        }
+
         Type GetType(string messageTypeIdentifier)
         {
             if (!cachedTypes.TryGetValue(messageTypeIdentifier, out var type))
             {
-                type = Type.GetType(messageTypeIdentifier, false);
+                try
+                {
+                    type = Type.GetType(messageTypeIdentifier);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"Message type identifier '{messageTypeIdentifier}' could not be loaded", ex);
+                }
+
+                // we cache null values as well to prevent trying to load the type multiple times
                 cachedTypes[messageTypeIdentifier] = type;
             }
 

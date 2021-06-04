@@ -2,6 +2,7 @@ namespace NServiceBus
 {
     using System;
     using System.IO;
+    using System.Threading;
     using System.Threading.Tasks;
     using DataBus;
     using Logging;
@@ -15,17 +16,17 @@ namespace NServiceBus
 
         public TimeSpan MaxMessageTimeToLive { get; set; }
 
-        public Task<Stream> Get(string key)
+        public Task<Stream> Get(string key, CancellationToken cancellationToken = default)
         {
             var filePath = Path.Combine(basePath, key);
 
             logger.DebugFormat("Opening stream from '{0}'.", filePath);
 
             var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true);
-            return Task.FromResult((Stream) fileStream);
+            return Task.FromResult((Stream)fileStream);
         }
 
-        public async Task<string> Put(Stream stream, TimeSpan timeToBeReceived)
+        public async Task<string> Put(Stream stream, TimeSpan timeToBeReceived, CancellationToken cancellationToken = default)
         {
             var key = GenerateKey(timeToBeReceived);
 
@@ -35,8 +36,8 @@ namespace NServiceBus
 
             using (var output = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                const int bufferSize = 32*1024;
-                await stream.CopyToAsync(output, bufferSize).ConfigureAwait(false);
+                const int bufferSize = 32 * 1024;
+                await stream.CopyToAsync(output, bufferSize, cancellationToken).ConfigureAwait(false);
             }
 
             logger.DebugFormat("Saved stream to '{0}'.", filePath);
@@ -44,11 +45,11 @@ namespace NServiceBus
             return key;
         }
 
-        public Task Start()
+        public Task Start(CancellationToken cancellationToken = default)
         {
             logger.Info("File share data bus started. Location: " + basePath);
             //TODO: Implement a clean up thread
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
         string GenerateKey(TimeSpan timeToBeReceived)
@@ -58,11 +59,11 @@ namespace NServiceBus
                 timeToBeReceived = MaxMessageTimeToLive;
             }
 
-            var keepMessageUntil = DateTime.MaxValue;
+            var keepMessageUntil = DateTimeOffset.MaxValue;
 
             if (timeToBeReceived < TimeSpan.MaxValue)
             {
-                keepMessageUntil = DateTime.Now + timeToBeReceived;
+                keepMessageUntil = DateTimeOffset.Now + timeToBeReceived;
             }
 
             return Path.Combine(keepMessageUntil.ToString("yyyy-MM-dd_HH"), Guid.NewGuid().ToString());

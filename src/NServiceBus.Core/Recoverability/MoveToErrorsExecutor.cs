@@ -2,21 +2,21 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
-    using Extensibility;
     using Routing;
     using Transport;
 
     class MoveToErrorsExecutor
     {
-        public MoveToErrorsExecutor(IDispatchMessages dispatcher, Dictionary<string, string> staticFaultMetadata, Action<Dictionary<string, string>> headerCustomizations)
+        public MoveToErrorsExecutor(IMessageDispatcher dispatcher, Dictionary<string, string> staticFaultMetadata, Action<Dictionary<string, string>> headerCustomizations)
         {
             this.dispatcher = dispatcher;
             this.staticFaultMetadata = staticFaultMetadata;
             this.headerCustomizations = headerCustomizations;
         }
 
-        public Task MoveToErrorQueue(string errorQueueAddress, IncomingMessage message, Exception exception, TransportTransaction transportTransaction)
+        public Task MoveToErrorQueue(string errorQueueAddress, IncomingMessage message, Exception exception, TransportTransaction transportTransaction, CancellationToken cancellationToken = default)
         {
             message.RevertToOriginalBodyIfNeeded();
 
@@ -37,10 +37,10 @@
 
             var transportOperations = new TransportOperations(new TransportOperation(outgoingMessage, new UnicastAddressTag(errorQueueAddress)));
 
-            return dispatcher.Dispatch(transportOperations, transportTransaction, new ContextBag());
+            return dispatcher.Dispatch(transportOperations, transportTransaction, cancellationToken);
         }
 
-        IDispatchMessages dispatcher;
+        IMessageDispatcher dispatcher;
         Dictionary<string, string> staticFaultMetadata;
         Action<Dictionary<string, string>> headerCustomizations;
     }

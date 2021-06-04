@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -13,7 +14,7 @@
 
     class MessageDrivenSubscribeTerminator : PipelineTerminator<ISubscribeContext>
     {
-        public MessageDrivenSubscribeTerminator(SubscriptionRouter subscriptionRouter, string subscriberAddress, string subscriberEndpoint, IDispatchMessages dispatcher)
+        public MessageDrivenSubscribeTerminator(SubscriptionRouter subscriptionRouter, string subscriberAddress, string subscriberEndpoint, IMessageDispatcher dispatcher)
         {
             this.subscriptionRouter = subscriptionRouter;
             this.subscriberAddress = subscriberAddress;
@@ -21,50 +22,77 @@
             this.dispatcher = dispatcher;
         }
 
-        protected override Task Terminate(ISubscribeContext context)
+        protected override async Task Terminate(ISubscribeContext context)
         {
-            var eventType = context.EventType;
+            var subscribeTasks = new List<Task>();
 
-            var publisherAddresses = subscriptionRouter.GetAddressesForEventType(eventType);
-            if (publisherAddresses.Count == 0)
+            foreach (var eventType in context.EventTypes)
             {
-                throw new Exception($"No publisher address could be found for message type '{eventType}'. Ensure that a publisher has been configured for the event type and that the configured publisher endpoint has at least one known instance.");
+                try
+                {
+                    var publisherAddresses = subscriptionRouter.GetAddressesForEventType(eventType);
+                    if (publisherAddresses.Count == 0)
+                    {
+                        throw new Exception($"No publisher address could be found for message type '{eventType}'. Ensure that a publisher has been configured for the event type and that the configured publisher endpoint has at least one known instance.");
+                    }
+
+                    foreach (var publisherAddress in publisherAddresses)
+                    {
+                        Logger.Debug($"Subscribing to {eventType.AssemblyQualifiedName} at publisher queue {publisherAddress}");
+
+                        var subscriptionMessage = ControlMessageFactory.Create(MessageIntentEnum.Subscribe);
+
+                        subscriptionMessage.Headers[Headers.SubscriptionMessageType] = eventType.AssemblyQualifiedName;
+                        subscriptionMessage.Headers[Headers.ReplyToAddress] = subscriberAddress;
+                        subscriptionMessage.Headers[Headers.SubscriberTransportAddress] = subscriberAddress;
+                        subscriptionMessage.Headers[Headers.SubscriberEndpoint] = subscriberEndpoint;
+                        subscriptionMessage.Headers[Headers.TimeSent] = DateTimeOffsetHelper.ToWireFormattedString(DateTimeOffset.UtcNow);
+                        subscriptionMessage.Headers[Headers.NServiceBusVersion] = GitVersionInformation.MajorMinorPatch;
+
+                        subscribeTasks.Add(SendSubscribeMessageWithRetries(publisherAddress, subscriptionMessage, eventType.AssemblyQualifiedName, context.Extensions, 0, context.CancellationToken));
+                    }
+                }
+#pragma warning disable PS0019 // Do not catch Exception without considering OperationCanceledException - Tasks are not observed until below
+                catch (Exception e)
+#pragma warning restore PS0019 // Do not catch Exception without considering OperationCanceledException
+                {
+                    subscribeTasks.Add(Task.FromException(e));
+                }
             }
 
-            var subscribeTasks = new List<Task>(publisherAddresses.Count);
-            foreach (var publisherAddress in publisherAddresses)
+            var t = Task.WhenAll(subscribeTasks);
+            try
             {
-                Logger.Debug($"Subscribing to {eventType.AssemblyQualifiedName} at publisher queue {publisherAddress}");
-
-                var subscriptionMessage = ControlMessageFactory.Create(MessageIntentEnum.Subscribe);
-
-                subscriptionMessage.Headers[Headers.SubscriptionMessageType] = eventType.AssemblyQualifiedName;
-                subscriptionMessage.Headers[Headers.ReplyToAddress] = subscriberAddress;
-                subscriptionMessage.Headers[Headers.SubscriberTransportAddress] = subscriberAddress;
-                subscriptionMessage.Headers[Headers.SubscriberEndpoint] = subscriberEndpoint;
-                subscriptionMessage.Headers[Headers.TimeSent] = DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow);
-                subscriptionMessage.Headers[Headers.NServiceBusVersion] = GitVersionInformation.MajorMinorPatch;
-
-                subscribeTasks.Add(SendSubscribeMessageWithRetries(publisherAddress, subscriptionMessage, eventType.AssemblyQualifiedName, context.Extensions));
+                await t.ConfigureAwait(false);
             }
-            return Task.WhenAll(subscribeTasks);
+            catch (Exception)
+            {
+                // if subscribing via SubscribeAll, throw an AggregateException
+                if (context.Extensions.TryGet<bool>(MessageSession.SubscribeAllFlagKey, out var flag) && flag)
+                {
+                    throw t.Exception;
+                }
+
+                // otherwise throw the first exception to not change exception behavior when calling subscribe.
+                throw;
+            }
         }
 
-        async Task SendSubscribeMessageWithRetries(string destination, OutgoingMessage subscriptionMessage, string messageType, ContextBag context, int retriesCount = 0)
+        async Task SendSubscribeMessageWithRetries(string destination, OutgoingMessage subscriptionMessage, string messageType, ContextBag context, int retriesCount, CancellationToken cancellationToken)
         {
             var state = context.GetOrCreate<Settings>();
             try
             {
                 var transportOperation = new TransportOperation(subscriptionMessage, new UnicastAddressTag(destination));
                 var transportTransaction = context.GetOrCreate<TransportTransaction>();
-                await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, context).ConfigureAwait(false);
+                await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, cancellationToken).ConfigureAwait(false);
             }
             catch (QueueNotFoundException ex)
             {
                 if (retriesCount < state.MaxRetries)
                 {
-                    await Task.Delay(state.RetryDelay).ConfigureAwait(false);
-                    await SendSubscribeMessageWithRetries(destination, subscriptionMessage, messageType, context, ++retriesCount).ConfigureAwait(false);
+                    await Task.Delay(state.RetryDelay, cancellationToken).ConfigureAwait(false);
+                    await SendSubscribeMessageWithRetries(destination, subscriptionMessage, messageType, context, ++retriesCount, cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
@@ -75,7 +103,7 @@
             }
         }
 
-        readonly IDispatchMessages dispatcher;
+        readonly IMessageDispatcher dispatcher;
         readonly string subscriberAddress;
         readonly string subscriberEndpoint;
         readonly SubscriptionRouter subscriptionRouter;

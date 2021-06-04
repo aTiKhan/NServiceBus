@@ -11,11 +11,10 @@
 
     static class PipelineExecutionExtensions
     {
-        // ReSharper disable once SuggestBaseTypeForParameter
-        public static Func<TRootContext, Task> CreatePipelineExecutionFuncFor<TRootContext>(this IBehavior[] behaviors)
+        public static Func<TRootContext, Task> CreatePipelineExecutionFuncFor<TRootContext>(this IBehavior[] behaviors, List<Expression> expressions = null)
             where TRootContext : IBehaviorContext
         {
-            return (Func<TRootContext, Task>)behaviors.CreatePipelineExecutionExpression();
+            return (Func<TRootContext, Task>)behaviors.CreatePipelineExecutionExpression(expressions);
         }
 
         /// <code>
@@ -49,7 +48,7 @@
                 var genericArguments = behaviorInterfaceType.GetGenericArguments();
                 var inContextType = genericArguments[0];
 
-                var inContextParameter = ExpressionInfo.Parameter(inContextType, $"context{i}");
+                var inContextParameter = Expression.Parameter(inContextType, $"context{i}");
 
                 if (i == behaviorCount)
                 {
@@ -65,16 +64,14 @@
             return lambdaExpression;
         }
 
-        // ReSharper disable once SuggestBaseTypeForParameter
-
         /// <code>
         /// context{i} => behavior.Invoke(context{i}, context{i+1} => previous)
         /// </code>>
         static Delegate CreateBehaviorCallDelegate(IBehavior currentBehavior, MethodInfo methodInfo, ParameterExpression outerContextParam, Delegate previous, List<Expression> expressions = null)
         {
-            var body = ExpressionInfo.Call(ExpressionInfo.Constant(currentBehavior), methodInfo, outerContextParam, ExpressionInfo.Constant(previous));
-            var lambdaExpression = ExpressionInfo.Lambda(body, outerContextParam);
-            expressions?.Add(lambdaExpression.ToExpression());
+            var body = Expression.Call(Expression.Constant(currentBehavior), methodInfo, outerContextParam, Expression.Constant(previous));
+            var lambdaExpression = Expression.Lambda(body, outerContextParam);
+            expressions?.Add(lambdaExpression);
             return lambdaExpression.CompileFast();
         }
 
@@ -83,8 +80,8 @@
         /// </code>>
         static Delegate CreateDoneDelegate(Type inContextType, int i)
         {
-            var innerContextParam = ExpressionInfo.Parameter(inContextType, $"context{i + 1}");
-            return ExpressionInfo.Lambda(ExpressionInfo.Constant(TaskEx.CompletedTask), innerContextParam).CompileFast();
+            var innerContextParam = Expression.Parameter(inContextType, $"context{i + 1}");
+            return Expression.Lambda(Expression.Constant(Task.CompletedTask), innerContextParam).CompileFast();
         }
     }
 }

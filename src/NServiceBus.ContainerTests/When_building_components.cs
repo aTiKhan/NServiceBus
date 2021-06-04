@@ -1,99 +1,87 @@
+#pragma warning disable CS0618
 namespace NServiceBus.ContainerTests
 {
     using System;
+    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus;
-    using ObjectBuilder.Common;
     using NUnit.Framework;
 
-    [TestFixture]
     public class When_building_components
     {
         [Test]
         public void Singleton_components_should_yield_the_same_instance()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
-                Assert.AreEqual(builder.Build(typeof(SingletonComponent)), builder.Build(typeof(SingletonComponent)));
-            }
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            Assert.AreEqual(serviceProvider.GetService(typeof(SingletonComponent)), serviceProvider.GetService(typeof(SingletonComponent)));
         }
 
         [Test]
         public void Singlecall_components_should_yield_unique_instances()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
-                Assert.AreNotEqual(builder.Build(typeof(SinglecallComponent)), builder.Build(typeof(SinglecallComponent)));
-            }
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            Assert.AreNotEqual(serviceProvider.GetService<SinglecallComponent>(), serviceProvider.GetService<SinglecallComponent>());
         }
 
         [Test]
         public void UoW_components_should_yield_the_same_instance()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
 
-                var instance1 = builder.Build(typeof(InstancePerUoWComponent));
-                var instance2 = builder.Build(typeof(InstancePerUoWComponent));
+            var instance1 = serviceProvider.GetService(typeof(InstancePerUoWComponent));
+            var instance2 = serviceProvider.GetService(typeof(InstancePerUoWComponent));
 
-                Assert.AreSame(instance1, instance2);
-            }
+            Assert.AreSame(instance1, instance2);
         }
 
         [Test]
         public void Lambda_uow_components_should_yield_the_same_instance()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
 
-                var instance1 = builder.Build(typeof(LambdaComponentUoW));
-                var instance2 = builder.Build(typeof(LambdaComponentUoW));
+            var instance1 = serviceProvider.GetService(typeof(LambdaComponentUoW));
+            var instance2 = serviceProvider.GetService(typeof(LambdaComponentUoW));
 
-                Assert.AreSame(instance1, instance2);
-            }
+            Assert.AreSame(instance1, instance2);
         }
 
         [Test]
         public void Lambda_singlecall_components_should_yield_unique_instances()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
-                Assert.AreNotEqual(builder.Build(typeof(SingleCallLambdaComponent)), builder.Build(typeof(SingleCallLambdaComponent)));
-            }
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            Assert.AreNotEqual(serviceProvider.GetService(typeof(SingleCallLambdaComponent)), serviceProvider.GetService(typeof(SingleCallLambdaComponent)));
         }
 
         [Test]
         public void Lambda_singleton_components_should_yield_the_same_instance()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
-                Assert.AreEqual(builder.Build(typeof(SingletonLambdaComponent)), builder.Build(typeof(SingletonLambdaComponent)));
-            }
-        }
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
 
-        [Test]
-        public void Requesting_an_unregistered_component_should_throw()
-        {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
-                Assert.That(() => builder.Build(typeof(UnregisteredComponent)),Throws.Exception);
-            }
+            Assert.AreEqual(serviceProvider.GetService(typeof(SingletonLambdaComponent)), serviceProvider.GetService(typeof(SingletonLambdaComponent)));
         }
 
         [Test]
         public void Resolving_all_components_of_unregistered_types_should_give_empty_list()
         {
-            using (var builder = TestContainerBuilder.ConstructBuilder())
-            {
-                InitializeBuilder(builder);
-                Assert.IsEmpty(builder.BuildAll(typeof(UnregisteredComponent)));
-            }
+            var serviceCollection = new ServiceCollection();
+            InitializeServices(serviceCollection);
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            Assert.IsEmpty(serviceProvider.GetServices(typeof(UnregisteredComponent)));
         }
 
         [Test]
@@ -101,11 +89,10 @@ namespace NServiceBus.ContainerTests
         {
             try
             {
-                using (var builder = TestContainerBuilder.ConstructBuilder())
-                {
-                    InitializeBuilder(builder);
-                    builder.Build(typeof(RecursiveComponent));
-                }
+                var serviceCollection = new ServiceCollection();
+                InitializeServices(serviceCollection);
+                var serviceProvider = serviceCollection.BuildServiceProvider();
+                serviceProvider.GetService(typeof(RecursiveComponent));
             }
             catch (Exception)
             {
@@ -113,15 +100,15 @@ namespace NServiceBus.ContainerTests
             }
         }
 
-        void InitializeBuilder(IContainer container)
+        void InitializeServices(IServiceCollection serviceCollection)
         {
-            container.Configure(typeof(SingletonComponent), DependencyLifecycle.SingleInstance);
-            container.Configure(typeof(SinglecallComponent), DependencyLifecycle.InstancePerCall);
-            container.Configure(typeof(InstancePerUoWComponent), DependencyLifecycle.InstancePerUnitOfWork);
-            container.Configure(() => new SingletonLambdaComponent(), DependencyLifecycle.SingleInstance);
-            container.Configure(() => new SingleCallLambdaComponent(), DependencyLifecycle.InstancePerCall);
-            container.Configure(() => new LambdaComponentUoW(), DependencyLifecycle.InstancePerUnitOfWork);
-            container.Configure(() => new RecursiveComponent(), DependencyLifecycle.SingleInstance);
+            serviceCollection.ConfigureComponent(typeof(SingletonComponent), DependencyLifecycle.SingleInstance);
+            serviceCollection.ConfigureComponent(typeof(SinglecallComponent), DependencyLifecycle.InstancePerCall);
+            serviceCollection.ConfigureComponent(typeof(InstancePerUoWComponent), DependencyLifecycle.InstancePerUnitOfWork);
+            serviceCollection.ConfigureComponent(() => new SingletonLambdaComponent(), DependencyLifecycle.SingleInstance);
+            serviceCollection.ConfigureComponent(() => new SingleCallLambdaComponent(), DependencyLifecycle.InstancePerCall);
+            serviceCollection.ConfigureComponent(() => new LambdaComponentUoW(), DependencyLifecycle.InstancePerUnitOfWork);
+            serviceCollection.ConfigureComponent(() => new RecursiveComponent(), DependencyLifecycle.SingleInstance);
         }
 
         public class RecursiveComponent
@@ -135,7 +122,6 @@ namespace NServiceBus.ContainerTests
 
         public interface ISingletonComponentWithPropertyDependency
         {
-             
         }
 
         public class SingletonComponentWithPropertyDependency : ISingletonComponentWithPropertyDependency
@@ -197,3 +183,4 @@ namespace NServiceBus.ContainerTests
     {
     }
 }
+#pragma warning restore CS0618

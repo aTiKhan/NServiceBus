@@ -50,7 +50,6 @@
             {
                 EndpointSetup<DefaultServer>(b =>
                 {
-                    b.EnableFeature<TimeoutManager>();
                     b.ExecuteTheseHandlersFirst(typeof(TestSaga12));
                     b.LimitMessageProcessingConcurrencyTo(1); // This test only works if the endpoints processes messages sequentially
                 });
@@ -61,24 +60,27 @@
                 IHandleMessages<CompleteSagaMessage>,
                 IHandleMessages<AnotherMessage>
             {
-                public Context Context { get; set; }
+                public TestSaga12(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
                 {
-                    Context.StartSagaMessageReceived = true;
+                    testContext.StartSagaMessageReceived = true;
                     return Task.FromResult(0);
                 }
 
                 public Task Handle(AnotherMessage message, IMessageHandlerContext context)
                 {
-                    Context.SagaReceivedAnotherMessage = true;
+                    testContext.SagaReceivedAnotherMessage = true;
                     return Task.FromResult(0);
                 }
 
                 public Task Handle(CompleteSagaMessage message, IMessageHandlerContext context)
                 {
                     MarkAsComplete();
-                    Context.SagaCompleted = true;
+                    testContext.SagaCompleted = true;
                     return Task.FromResult(0);
                 }
 
@@ -91,6 +93,8 @@
                     mapper.ConfigureMapping<AnotherMessage>(m => m.SomeId)
                         .ToSaga(s => s.SomeId);
                 }
+
+                Context testContext;
             }
 
             public class TestSagaData12 : ContainSagaData
@@ -101,13 +105,18 @@
 
         public class CompletionHandler : IHandleMessages<AnotherMessage>
         {
-            public Context Context { get; set; }
+            public CompletionHandler(Context testContext)
+            {
+                this.testContext = testContext;
+            }
 
             public Task Handle(AnotherMessage message, IMessageHandlerContext context)
             {
-                Context.AnotherMessageReceived = true;
+                testContext.AnotherMessageReceived = true;
                 return Task.FromResult(0);
             }
+
+            Context testContext;
         }
 
         public class StartSagaMessage : ICommand

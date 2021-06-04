@@ -7,7 +7,7 @@ namespace NServiceBus.Settings
     /// <summary>
     /// Setting container.
     /// </summary>
-    public class SettingsHolder : ReadOnlySettings
+    public partial class SettingsHolder : ReadOnlySettings
     {
         /// <summary>
         /// Gets the given setting by key.
@@ -17,7 +17,7 @@ namespace NServiceBus.Settings
         public T Get<T>(string key)
         {
             Guard.AgainstNullAndEmpty(nameof(key), key);
-            return (T) Get(key);
+            return (T)Get(key);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace NServiceBus.Settings
                 return false;
             }
 
-            val = (T) tmp;
+            val = (T)tmp;
             return true;
         }
 
@@ -67,7 +67,7 @@ namespace NServiceBus.Settings
         /// <returns>The value if found, throws if not.</returns>
         public T Get<T>()
         {
-            return (T) Get(typeof(T).FullName);
+            return (T)Get(typeof(T).FullName);
         }
 
         /// <summary>
@@ -112,12 +112,12 @@ namespace NServiceBus.Settings
             Guard.AgainstNullAndEmpty(nameof(key), key);
             if (Overrides.TryGetValue(key, out var result))
             {
-                return (T) result;
+                return (T)result;
             }
 
             if (Defaults.TryGetValue(key, out result))
             {
-                return (T) result;
+                return (T)result;
             }
 
             return default;
@@ -201,20 +201,6 @@ namespace NServiceBus.Settings
         /// </summary>
         /// <typeparam name="T">The type to use as a key for storing the setting.</typeparam>
         /// <param name="value">The setting value.</param>
-        [ObsoleteEx(
-            ReplacementTypeOrMember = "Set<T>(T value)",
-            TreatAsErrorFromVersion = "8.0",
-            RemoveInVersion = "9.0")]
-        public void Set<T>(object value)
-        {
-            Set(typeof(T).FullName, value);
-        }
-
-        /// <summary>
-        /// Sets the value.
-        /// </summary>
-        /// <typeparam name="T">The type to use as a key for storing the setting.</typeparam>
-        /// <param name="value">The setting value.</param>
         public void Set<T>(T value)
         {
             Set(typeof(T).FullName, value);
@@ -228,21 +214,6 @@ namespace NServiceBus.Settings
         public void Set<T>(Action value)
         {
             Set(typeof(T).FullName, value);
-        }
-
-        /// <summary>
-        /// Sets the default setting value.
-        /// </summary>
-        /// <typeparam name="T">The type to use as a key for storing the setting.</typeparam>
-        /// <param name="value">The setting value.</param>
-        [ObsoleteEx(
-            ReplacementTypeOrMember = "SetDefault<T>(T value)",
-            TreatAsErrorFromVersion = "8.0",
-            RemoveInVersion = "9.0")]
-
-        public void SetDefault<T>(object value)
-        {
-            SetDefault(typeof(T).FullName, value);
         }
 
         /// <summary>

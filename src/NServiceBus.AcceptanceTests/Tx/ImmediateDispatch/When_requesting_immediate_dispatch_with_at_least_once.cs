@@ -31,8 +31,7 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.ConfigureTransport()
-                        .Transactions(TransportTransactionMode.ReceiveOnly);
+                    config.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                 });
             }
 
@@ -53,13 +52,18 @@
 
             public class MessageToBeDispatchedImmediatelyHandler : IHandleMessages<MessageToBeDispatchedImmediately>
             {
-                public Context Context { get; set; }
+                public MessageToBeDispatchedImmediatelyHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToBeDispatchedImmediately message, IMessageHandlerContext context)
                 {
-                    Context.MessageDispatched = true;
+                    testContext.MessageDispatched = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

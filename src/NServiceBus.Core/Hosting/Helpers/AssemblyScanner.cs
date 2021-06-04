@@ -6,6 +6,9 @@ namespace NServiceBus.Hosting.Helpers
     using System.Linq;
     using System.Reflection;
     using System.Runtime.CompilerServices;
+#if NETCOREAPP
+    using System.Runtime.Loader;
+#endif
     using System.Text;
     using Logging;
 
@@ -47,6 +50,8 @@ namespace NServiceBus.Hosting.Helpers
 
         internal string CoreAssemblyName { get; set; } = NServicebusCoreAssemblyName;
 
+        internal string AdditionalAssemblyScanningPath { get; set; }
+
         /// <summary>
         /// Traverses the specified base directory including all sub-directories, generating a list of assemblies that should be
         /// scanned for handlers, a list of skipped files, and a list of errors that occurred while scanning.
@@ -81,17 +86,16 @@ namespace NServiceBus.Hosting.Helpers
 
             var assemblies = new List<Assembly>();
 
-            foreach (var assemblyFile in ScanDirectoryForAssemblyFiles(baseDirectoryToScan, ScanNestedDirectories))
+            ScanAssembliesInDirectory(baseDirectoryToScan, assemblies, results);
+
+            if (!string.IsNullOrWhiteSpace(AdditionalAssemblyScanningPath))
             {
-                if (TryLoadScannableAssembly(assemblyFile.FullName, results, out var assembly))
-                {
-                    assemblies.Add(assembly);
-                }
+                ScanAssembliesInDirectory(AdditionalAssemblyScanningPath, assemblies, results);
             }
 
             var platformAssembliesString = (string)AppDomain.CurrentDomain.GetData("TRUSTED_PLATFORM_ASSEMBLIES");
 
-            if (platformAssembliesString != null)
+            if (!string.IsNullOrEmpty(platformAssembliesString))
             {
                 var platformAssemblies = platformAssembliesString.Split(Path.PathSeparator);
 
@@ -115,6 +119,17 @@ namespace NServiceBus.Hosting.Helpers
             results.RemoveDuplicates();
 
             return results;
+        }
+
+        void ScanAssembliesInDirectory(string directoryToScan, List<Assembly> assemblies, AssemblyScannerResults results)
+        {
+            foreach (var assemblyFile in ScanDirectoryForAssemblyFiles(directoryToScan, ScanNestedDirectories))
+            {
+                if (TryLoadScannableAssembly(assemblyFile.FullName, results, out var assembly))
+                {
+                    assemblies.Add(assembly);
+                }
+            }
         }
 
         bool TryLoadScannableAssembly(string assemblyPath, AssemblyScannerResults results, out Assembly assembly)
@@ -141,8 +156,12 @@ namespace NServiceBus.Hosting.Helpers
 
             try
             {
+#if NETCOREAPP
+                var context = AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly());
+                assembly = context.LoadFromAssemblyPath(assemblyPath);
+#else
                 assembly = Assembly.LoadFrom(assemblyPath);
-
+#endif
                 return true;
             }
             catch (Exception ex) when (ex is BadImageFormatException || ex is FileLoadException)
@@ -426,6 +445,9 @@ namespace NServiceBus.Hosting.Helpers
             "nunit",
             "nunit.framework",
             "nunit.applicationdomain",
+            "nunit.engine",
+            "nunit.engine.api",
+            "nunit.engine.core",
 
             // NSB OSS Dependencies
             "nlog",

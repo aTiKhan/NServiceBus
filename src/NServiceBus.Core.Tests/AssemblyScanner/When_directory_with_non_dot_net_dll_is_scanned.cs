@@ -9,10 +9,12 @@
     public class When_directory_with_non_dot_net_dll_is_scanned
     {
         [Test]
-        public void non_dotnet_files_are_skipped()
+        public void Non_dotnet_files_are_skipped()
         {
-            var assemblyScanner = new AssemblyScanner(Path.Combine(TestContext.CurrentContext.TestDirectory, "TestDlls"));
-            assemblyScanner.ScanAppDomainAssemblies = false;
+            var assemblyScanner = new AssemblyScanner(Path.Combine(TestContext.CurrentContext.TestDirectory, "TestDlls"))
+            {
+                ScanAppDomainAssemblies = false
+            };
 
             var results = assemblyScanner
                 .GetScannableAssemblies();
@@ -22,7 +24,6 @@
             var notProperDotNetDlls = new[]
                 {
                     "libzmq-v120-mt-3_2_3.dll",
-                    "Tail.exe",
                     "some_random.dll",
                     "some_random.exe"
                 };

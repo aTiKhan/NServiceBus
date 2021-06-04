@@ -1,28 +1,32 @@
-﻿namespace NServiceBus.Unicast.Tests
+﻿#pragma warning disable CS0618
+namespace NServiceBus.Unicast.Tests
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
     using Testing;
     using UnitOfWork;
 
     [TestFixture]
+    [SuppressMessage("Code", "PS0018:A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext", Justification = "Obsolete")]
     public class UnitOfWorkBehaviorTests
     {
         [Test]
         public async Task Should_not_call_Begin_or_End_when_hasUnitsOfWork_is_false()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var behavior = new UnitOfWorkBehavior();
 
-            await InvokeBehavior(builder, behavior: behavior);
+            await InvokeBehavior(services, behavior: behavior);
 
             var unitOfWork = new UnitOfWork();
-            builder.Register<IManageUnitsOfWork>(unitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
 
-            await InvokeBehavior(builder, behavior: behavior); 
+            await InvokeBehavior(services, behavior: behavior);
 
             Assert.IsFalse(unitOfWork.BeginCalled);
             Assert.IsFalse(unitOfWork.EndCalled);
@@ -31,15 +35,16 @@
         [Test]
         public void When_first_throw_second_is_cleaned_up()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var unitOfWorkThatThrowsFromEnd = new UnitOfWorkThatThrowsFromEnd();
             var unitOfWork = new UnitOfWork();
 
-            builder.Register<IManageUnitsOfWork>(unitOfWorkThatThrowsFromEnd, unitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWorkThatThrowsFromEnd);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
 
             //since it is a single exception then it will not be an AggregateException
-            Assert.That(async () => await InvokeBehavior(builder), Throws.InvalidOperationException);
+            Assert.That(async () => await InvokeBehavior(services), Throws.InvalidOperationException);
             Assert.IsTrue(unitOfWorkThatThrowsFromEnd.BeginCalled);
             Assert.IsTrue(unitOfWorkThatThrowsFromEnd.EndCalled);
             Assert.IsTrue(unitOfWork.BeginCalled);
@@ -49,60 +54,59 @@
         [Test]
         public void Should_append_end_exception_to_rethrow()
         {
-            var builder = new FakeBuilder();
-
             var unitOfWork = new UnitOfWorkThatThrowsFromEnd();
 
-            builder.Register<IManageUnitsOfWork>(() => unitOfWork);
+            var services = new ServiceCollection();
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
 
             //since it is a single exception then it will not be an AggregateException
-            Assert.That(async () => await InvokeBehavior(builder), Throws.InvalidOperationException.And.SameAs(unitOfWork.ExceptionThrownFromEnd));
+            Assert.That(async () => await InvokeBehavior(services), Throws.InvalidOperationException.And.SameAs(unitOfWork.ExceptionThrownFromEnd));
         }
 
         [Test]
         public void Should_not_invoke_end_if_begin_was_not_invoked()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var unitOfWorkThatThrowsFromBegin = new UnitOfWorkThatThrowsFromBegin();
             var unitOfWork = new UnitOfWork();
 
-            builder.Register<IManageUnitsOfWork>(unitOfWorkThatThrowsFromBegin, unitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWorkThatThrowsFromBegin);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
 
             //since it is a single exception then it will not be an AggregateException
-            Assert.That(async () => await InvokeBehavior(builder), Throws.InvalidOperationException);
+            Assert.That(async () => await InvokeBehavior(services), Throws.InvalidOperationException);
             Assert.False(unitOfWork.EndCalled);
-
         }
 
         [Test]
         public void Should_pass_exceptions_to_the_uow_end()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var unitOfWork = new UnitOfWork();
 
-            builder.Register<IManageUnitsOfWork>(() => unitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
 
             var ex = new Exception("Handler failed");
             //since it is a single exception then it will not be an AggregateException
-            Assert.That(async () => await InvokeBehavior(builder, ex), Throws.InstanceOf<Exception>().And.SameAs(ex));
+            Assert.That(async () => await InvokeBehavior(services, ex), Throws.InstanceOf<Exception>().And.SameAs(ex));
             Assert.AreSame(ex, unitOfWork.ExceptionPassedToEnd);
         }
 
         [Test]
         public async Task Should_invoke_ends_in_reverse_order_of_the_begins()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var order = new List<string>();
             var firstUnitOfWork = new OrderAwareUnitOfWork("first", order);
             var secondUnitOfWork = new OrderAwareUnitOfWork("second", order);
 
+            services.AddTransient<IManageUnitsOfWork>(sp => firstUnitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => secondUnitOfWork);
 
-            builder.Register<IManageUnitsOfWork>(firstUnitOfWork, secondUnitOfWork);
-
-            await InvokeBehavior(builder);
+            await InvokeBehavior(services);
 
             Assert.AreEqual("first", order[0]);
             Assert.AreEqual("second", order[1]);
@@ -113,29 +117,32 @@
         [Test]
         public void Should_call_all_end_even_if_one_or_more_of_them_throws()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var unitOfWorkThatThrows = new UnitOfWorkThatThrowsFromEnd();
             var unitOfWork = new UnitOfWork();
 
-            builder.Register<IManageUnitsOfWork>(unitOfWorkThatThrows, unitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWorkThatThrows);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
 
-            Assert.That(async () => await InvokeBehavior(builder), Throws.InvalidOperationException);
+            Assert.That(async () => await InvokeBehavior(services), Throws.InvalidOperationException);
             Assert.True(unitOfWork.EndCalled);
         }
 
         [Test]
         public void Should_invoke_ends_on_all_begins_that_was_called_even_when_begin_throws()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var normalUnitOfWork = new UnitOfWork();
             var unitOfWorkThatThrows = new UnitOfWorkThatThrowsFromBegin();
             var unitOfWorkThatIsNeverCalled = new UnitOfWork();
 
-            builder.Register<IManageUnitsOfWork>(normalUnitOfWork, unitOfWorkThatThrows, unitOfWorkThatIsNeverCalled);
+            services.AddTransient<IManageUnitsOfWork>(sp => normalUnitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWorkThatThrows);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWorkThatIsNeverCalled);
 
-            Assert.That(async () => await InvokeBehavior(builder), Throws.InvalidOperationException);
+            Assert.That(async () => await InvokeBehavior(services), Throws.InvalidOperationException);
 
             Assert.True(normalUnitOfWork.EndCalled);
             Assert.True(unitOfWorkThatThrows.EndCalled);
@@ -145,29 +152,31 @@
         [Test]
         public void Should_throw_friendly_exception_if_IManageUnitsOfWork_Begin_returns_null()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
-            builder.Register<IManageUnitsOfWork>(() => new UnitOfWorkThatReturnsNullForBegin());
-            Assert.That(async () => await InvokeBehavior(builder),
+            services.AddTransient<IManageUnitsOfWork>(sp => new UnitOfWorkThatReturnsNullForBegin());
+            Assert.That(async () => await InvokeBehavior(services),
                 Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
         }
 
         [Test]
         public void Should_throw_friendly_exception_if_IManageUnitsOfWork_End_returns_null()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
+            services.AddSingleton<IManageUnitsOfWork>(sp => new UnitOfWorkThatReturnsNullForEnd());
 
-            builder.Register<IManageUnitsOfWork>(() => new UnitOfWorkThatReturnsNullForEnd());
-            Assert.That(async () => await InvokeBehavior(builder),
+            Assert.That(async () => await InvokeBehavior(services),
                 Throws.Exception.With.Message.EqualTo("Return a Task or mark the method as async."));
         }
 
-        static Task InvokeBehavior(FakeBuilder builder, Exception toThrow = null, UnitOfWorkBehavior behavior = null)
+        static Task InvokeBehavior(IServiceCollection services, Exception toThrow = null, UnitOfWorkBehavior behavior = null)
         {
             var runner = behavior ?? new UnitOfWorkBehavior();
 
-            var context = new TestableIncomingPhysicalMessageContext();
-            context.Builder = builder;
+            var context = new TestableIncomingPhysicalMessageContext
+            {
+                Services = services
+            };
 
             return runner.Invoke(context, ctx =>
             {
@@ -175,7 +184,8 @@
                 {
                     throw toThrow;
                 }
-                return TaskEx.CompletedTask;
+
+                return Task.CompletedTask;
             });
         }
 
@@ -188,7 +198,7 @@
             public Task Begin()
             {
                 BeginCalled = true;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             public Task End(Exception ex = null)
@@ -196,7 +206,6 @@
                 EndCalled = true;
                 throw ExceptionThrownFromEnd;
             }
-
         }
 
         class UnitOfWorkThatThrowsFromBegin : IManageUnitsOfWork
@@ -212,7 +221,7 @@
             public Task End(Exception ex = null)
             {
                 EndCalled = true;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -221,17 +230,18 @@
             public bool BeginCalled;
             public bool EndCalled;
             public Exception ExceptionPassedToEnd;
+
             public Task Begin()
             {
                 BeginCalled = true;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             public Task End(Exception ex = null)
             {
                 ExceptionPassedToEnd = ex;
                 EndCalled = true;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -244,7 +254,7 @@
 
             public Task End(Exception ex = null)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -252,7 +262,7 @@
         {
             public Task Begin()
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             public Task End(Exception ex = null)
@@ -264,15 +274,17 @@
         [Test]
         public async Task Verify_order()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var unitOfWork1 = new CountingUnitOfWork();
             var unitOfWork2 = new CountingUnitOfWork();
             var unitOfWork3 = new CountingUnitOfWork();
 
-            builder.Register<IManageUnitsOfWork>(unitOfWork1, unitOfWork2, unitOfWork3);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork1);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork2);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork3);
 
-            await InvokeBehavior(builder);
+            await InvokeBehavior(services);
 
             Assert.AreEqual(1, unitOfWork1.BeginCallIndex);
             Assert.AreEqual(2, unitOfWork2.BeginCallIndex);
@@ -293,28 +305,30 @@
             {
                 BeginCallCount++;
                 BeginCallIndex = BeginCallCount;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
+
             public Task End(Exception ex = null)
             {
                 EndCallCount++;
                 EndCallIndex = EndCallCount;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
         [Test]
         public void Should_pass_exception_to_cleanup()
         {
-            var builder = new FakeBuilder();
+            var services = new ServiceCollection();
 
             var unitOfWork = new CaptureExceptionPassedToEndUnitOfWork();
             var throwingUoW = new UnitOfWorkThatThrowsFromEnd();
 
-            builder.Register<IManageUnitsOfWork>(unitOfWork, throwingUoW);
+            services.AddTransient<IManageUnitsOfWork>(sp => unitOfWork);
+            services.AddTransient<IManageUnitsOfWork>(sp => throwingUoW);
 
             //since it is a single exception then it will not be an AggregateException
-            Assert.That(async () => await InvokeBehavior(builder), Throws.InstanceOf<InvalidOperationException>().And.SameAs(throwingUoW.ExceptionThrownFromEnd));
+            Assert.That(async () => await InvokeBehavior(services), Throws.InstanceOf<InvalidOperationException>().And.SameAs(throwingUoW.ExceptionThrownFromEnd));
             Assert.AreSame(throwingUoW.ExceptionThrownFromEnd, unitOfWork.Exception);
         }
 
@@ -322,13 +336,15 @@
         {
             public Task Begin()
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
+
             public Task End(Exception ex = null)
             {
                 Exception = ex;
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
+
             public Exception Exception;
         }
 
@@ -346,13 +362,13 @@
             public Task Begin()
             {
                 order.Add(name);
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
 
             public Task End(Exception ex = null)
             {
                 order.Add(name);
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
     }

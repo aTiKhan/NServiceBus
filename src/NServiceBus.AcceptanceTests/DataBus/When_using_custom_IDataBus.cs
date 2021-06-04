@@ -2,6 +2,7 @@
 {
     using System;
     using System.IO;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
@@ -26,7 +27,7 @@
             Assert.AreEqual(PayloadToSend, context.ReceivedPayload, "The large payload should be marshalled correctly using the databus");
         }
 
-        static byte[] PayloadToSend = new byte[1024*10];
+        static byte[] PayloadToSend = new byte[1024 * 10];
 
         public class Context : ScenarioContext
         {
@@ -41,7 +42,7 @@
                 EndpointSetup<DefaultServer>(b =>
                 {
                     b.UseDataBus(typeof(MyDataBus));
-                    b.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(ReceiverViaFluent));
+                    b.ConfigureRouting().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(ReceiverViaFluent));
                 });
             }
         }
@@ -55,14 +56,19 @@
 
             public class MyMessageHandler : IHandleMessages<MyMessageWithLargePayload>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyMessageWithLargePayload messageWithLargePayload, IMessageHandlerContext context)
                 {
-                    Context.ReceivedPayload = messageWithLargePayload.Payload.Value;
+                    testContext.ReceivedPayload = messageWithLargePayload.Payload.Value;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
@@ -74,13 +80,13 @@
                 this.context = context;
             }
 
-            public Task<Stream> Get(string key)
+            public Task<Stream> Get(string key, CancellationToken cancellationToken = default)
             {
                 var fileStream = new FileStream(context.TempPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
-                return Task.FromResult((Stream) fileStream);
+                return Task.FromResult((Stream)fileStream);
             }
 
-            public Task<string> Put(Stream stream, TimeSpan timeToBeReceived)
+            public Task<string> Put(Stream stream, TimeSpan timeToBeReceived, CancellationToken cancellationToken = default)
             {
                 using (var destination = File.OpenWrite(context.TempPath))
                 {
@@ -89,7 +95,7 @@
                 return Task.FromResult("key");
             }
 
-            public Task Start()
+            public Task Start(CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(0);
             }

@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting.Customization;
     using AcceptanceTesting.Support;
-    using Features;
 
     public class ExternallyManagedContainerServer : IEndpointSetupTemplate
     {
@@ -17,8 +16,6 @@
 
             configuration.TypesToIncludeInScan(endpointConfiguration.GetTypesScopedByTestClass());
             configuration.EnableInstallers();
-
-            configuration.DisableFeature<TimeoutManager>();
 
             var recoverability = configuration.Recoverability();
             recoverability.Delayed(delayed => delayed.NumberOfRetries(0));

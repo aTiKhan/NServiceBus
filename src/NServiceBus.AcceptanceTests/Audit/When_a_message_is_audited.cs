@@ -44,11 +44,11 @@
         {
             public EndpointWithAuditOn()
             {
-                EndpointSetup<DefaultServer,Context>((config, context) =>
-                {
-                    config.RegisterMessageMutator(new BodyMutator(context));
-                    config.AuditProcessedMessagesTo<AuditSpyEndpoint>();
-                });
+                EndpointSetup<DefaultServer, Context>((config, context) =>
+                 {
+                     config.RegisterMessageMutator(new BodyMutator(context));
+                     config.AuditProcessedMessagesTo<AuditSpyEndpoint>();
+                 });
             }
 
             class BodyMutator : IMutateIncomingTransportMessages
@@ -91,7 +91,7 @@
         {
             public AuditSpyEndpoint()
             {
-                EndpointSetup<DefaultServer,Context>((config, context) => config.RegisterMessageMutator(new BodySpy(context)));
+                EndpointSetup<DefaultServer, Context>((config, context) => config.RegisterMessageMutator(new BodySpy(context)));
             }
 
             class BodySpy : IMutateIncomingTransportMessages
@@ -112,17 +112,24 @@
 
             public class MessageToBeAuditedHandler : IHandleMessages<MessageToBeAudited>
             {
-                public Context TestContext { get; set; }
+                public MessageToBeAuditedHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToBeAudited message, IMessageHandlerContext context)
                 {
-                    if (message.RunId != TestContext.RunId)
+                    if (message.RunId != testContext.RunId)
+                    {
                         return Task.FromResult(0);
+                    }
 
-                    TestContext.Done = true;
+                    testContext.Done = true;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

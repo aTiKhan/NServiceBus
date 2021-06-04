@@ -5,7 +5,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using Logging;
     using NUnit.Framework;
 
@@ -14,6 +13,8 @@
         [Test]
         public async Task Should_retain_exception_details_over_immediate_and_delayed_retries()
         {
+            Requires.DelayedDelivery();
+
             var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })
                 .WithEndpoint<DelayedRetriesEndpoint>(b =>
                 {
@@ -52,10 +53,9 @@
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
                     var testContext = (Context)context.ScenarioContext;
-                    config.EnableFeature<TimeoutManager>();
 
                     var recoverability = config.Recoverability();
-                    recoverability.Failed(f => f.OnMessageSentToErrorQueue(failedMessage =>
+                    recoverability.Failed(f => f.OnMessageSentToErrorQueue((failedMessage, _) =>
                     {
                         testContext.MessageSentToErrorException = failedMessage.Exception;
                         testContext.MessageSentToError = true;
@@ -65,7 +65,7 @@
                     {
                         settings.NumberOfRetries(2);
                         settings.TimeIncrease(TimeSpan.FromMilliseconds(1));
-                        settings.OnMessageBeingRetried(retry =>
+                        settings.OnMessageBeingRetried((retry, _) =>
                         {
                             testContext.NumberOfDelayedRetriesPerformed++;
                             return Task.FromResult(0);
@@ -74,7 +74,7 @@
                     recoverability.Immediate(settings =>
                     {
                         settings.NumberOfRetries(3);
-                        settings.OnMessageBeingRetried(retry =>
+                        settings.OnMessageBeingRetried((retry, _) =>
                         {
                             testContext.TotalNumberOfImmediateRetriesEventInvocations++;
                             return Task.FromResult(0);
@@ -85,19 +85,24 @@
 
             class MessageToBeRetriedHandler : IHandleMessages<MessageToBeRetried>
             {
-                public Context Context { get; set; }
+                public MessageToBeRetriedHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(MessageToBeRetried message, IMessageHandlerContext context)
                 {
-                    if (message.Id != Context.Id)
+                    if (message.Id != testContext.Id)
                     {
                         return Task.FromResult(0); // messages from previous test runs must be ignored
                     }
 
-                    Context.TotalNumberOfHandlerInvocations++;
+                    testContext.TotalNumberOfHandlerInvocations++;
 
                     throw new SimulatedException("Simulated exception message");
                 }
+
+                Context testContext;
             }
         }
 

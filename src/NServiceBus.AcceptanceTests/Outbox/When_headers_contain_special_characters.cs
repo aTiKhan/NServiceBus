@@ -50,10 +50,11 @@
         {
             public OutboxEndpoint()
             {
-                EndpointSetup<DefaultServer>(b =>
+                EndpointSetup<DefaultServer>((b, r) =>
                 {
+                    b.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                     b.EnableOutbox();
-                    b.Pipeline.Register("BlowUpBeforeDispatchBehavior", new BlowUpBeforeDispatchBehavior((Context)ScenarioContext), "Force reading the message from Outbox storage.");
+                    b.Pipeline.Register("BlowUpBeforeDispatchBehavior", new BlowUpBeforeDispatchBehavior((Context)r.ScenarioContext), "Force reading the message from Outbox storage.");
                     b.Recoverability().Immediate(a => a.NumberOfRetries(1));
                 });
             }
@@ -95,14 +96,19 @@
 
             class SendOrderAcknowledgementHandler : IHandleMessages<SendOrderAcknowledgement>
             {
-                public Context Context { get; set; }
+                public SendOrderAcknowledgementHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(SendOrderAcknowledgement message, IMessageHandlerContext context)
                 {
-                    Context.MessageReceived = true;
-                    Context.UnicodeHeaders = context.MessageHeaders.ToDictionary(x => x.Key, x => x.Value);
+                    testContext.MessageReceived = true;
+                    testContext.UnicodeHeaders = context.MessageHeaders.ToDictionary(x => x.Key, x => x.Value);
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

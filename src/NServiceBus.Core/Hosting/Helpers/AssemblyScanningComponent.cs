@@ -36,6 +36,7 @@
             assemblyScanner.ScanNestedDirectories = assemblyScannerSettings.ScanAssembliesInNestedDirectories;
             assemblyScanner.ThrowExceptions = assemblyScannerSettings.ThrowExceptions;
             assemblyScanner.ScanAppDomainAssemblies = assemblyScannerSettings.ScanAppDomainAssemblies;
+            assemblyScanner.AdditionalAssemblyScanningPath = assemblyScannerSettings.AdditionalAssemblyScanningPath;
 
             var scannableAssemblies = assemblyScanner.GetScannableAssemblies();
 
@@ -53,7 +54,8 @@
                         FileVersion = FileVersionRetriever.GetFileVersion(a)
                     }),
                     scannableAssemblies.ErrorsThrownDuringScanning,
-                    scannableAssemblies.SkippedFiles
+                    scannableAssemblies.SkippedFiles,
+                    Settings = assemblyScannerSettings
                 });
             }
 
@@ -76,9 +78,9 @@
 
             public List<Type> UserProvidedTypes { get; set; }
 
-            public AssemblyScannerConfiguration AssemblyScannerConfiguration { get { return settings.GetOrCreate<AssemblyScannerConfiguration>(); } }
+            public AssemblyScannerConfiguration AssemblyScannerConfiguration => settings.GetOrCreate<AssemblyScannerConfiguration>();
 
-            public IList<Type> AvailableTypes { get { return settings.Get<IList<Type>>(TypesToScanSettingsKey); } }
+            public IList<Type> AvailableTypes => settings.Get<IList<Type>>(TypesToScanSettingsKey);
 
             public void SetDefaultAvailableTypes(IList<Type> scannedTypes)
             {

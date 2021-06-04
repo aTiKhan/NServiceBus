@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using MessageMutator;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
     using Transport;
 
@@ -33,11 +34,12 @@
                 context.Message.Instance,
                 context.Headers,
                 incomingLogicalMessage?.Instance,
-                incomingPhysicalMessage?.Headers);
+                incomingPhysicalMessage?.Headers,
+                context.CancellationToken);
 
             var hasMutators = false;
 
-            foreach (var mutator in context.Builder.BuildAll<IMutateOutgoingMessages>())
+            foreach (var mutator in context.Builder.GetServices<IMutateOutgoingMessages>())
             {
                 hasMutators = true;
 

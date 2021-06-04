@@ -3,6 +3,7 @@
     using System;
     using System.Globalization;
     using System.IO;
+    using System.Threading;
     using System.Threading.Tasks;
     using Logging;
 
@@ -11,7 +12,6 @@
         public DelayedMessagePoller(string basePath, string delayedDir)
         {
             this.basePath = basePath;
-            timer = new AsyncTimer();
 
             delayedRootDirectory = delayedDir;
         }
@@ -20,9 +20,9 @@
         {
             foreach (var delayDir in new DirectoryInfo(delayedRootDirectory).EnumerateDirectories())
             {
-                var timeToTrigger = DateTime.ParseExact(delayDir.Name, "yyyyMMddHHmmss", DateTimeFormatInfo.InvariantInfo);
+                var timeToTrigger = DateTimeOffset.ParseExact(delayDir.Name, "yyyyMMddHHmmss", DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
 
-                if (DateTime.UtcNow >= timeToTrigger)
+                if (DateTimeOffset.UtcNow >= timeToTrigger)
                 {
                     foreach (var fileInfo in delayDir.EnumerateFiles())
                     {
@@ -31,7 +31,7 @@
                 }
 
                 //wait a bit more so we can safely delete the dir
-                if (DateTime.UtcNow >= timeToTrigger.AddSeconds(10))
+                if (DateTimeOffset.UtcNow >= timeToTrigger.AddSeconds(10))
                 {
                     Directory.Delete(delayDir.FullName);
                 }
@@ -40,23 +40,48 @@
 
         public void Start()
         {
-            timer.Start(() =>
-            {
-                MoveDelayedMessagesToMainDirectory();
+            polling = new CancellationTokenSource();
 
-                return TaskEx.CompletedTask;
-            },
-            TimeSpan.FromSeconds(1),
-            ex => Logger.Error("Unable to move expired messages to main input queue.", ex));
+            _ = Task.Run(async () =>
+              {
+                  while (!polling.Token.IsCancellationRequested)
+                  {
+                      try
+                      {
+                          await Task.Delay(TimeSpan.FromSeconds(1), polling.Token).ConfigureAwait(false);
+                      }
+                      catch (Exception ex) when (ex.IsCausedBy(polling.Token))
+                      {
+                          // private token, poller is being stopped, log the exception in case the stack trace is ever needed for debugging
+                          Logger.Debug("Operation canceled while stopping delayed message polling.", ex);
+                          break;
+                      }
+
+                      try
+                      {
+                          MoveDelayedMessagesToMainDirectory();
+                      }
+                      catch (Exception ex)
+                      {
+                          Logger.Error("Unable to move expired messages to main input queue.", ex);
+                      }
+                  }
+              });
         }
 
-        public Task Stop()
+        public void Stop()
         {
-            return timer.Stop();
+            if (polling == null)
+            {
+                return;
+            }
+
+            polling.Cancel();
+            polling.Dispose();
         }
 
         string delayedRootDirectory;
-        IAsyncTimer timer;
+        CancellationTokenSource polling;
         string basePath;
 
         static ILog Logger = LogManager.GetLogger<DelayedMessagePoller>();

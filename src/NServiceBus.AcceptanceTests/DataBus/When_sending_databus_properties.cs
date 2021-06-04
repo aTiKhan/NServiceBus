@@ -44,7 +44,7 @@
                     var basePath = Path.Combine(TestContext.CurrentContext.TestDirectory, "databus", "sender");
                     builder.UseDataBus<FileShareDataBus>().BasePath(basePath);
 
-                    builder.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(Receiver));
+                    builder.ConfigureRouting().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(Receiver));
                 });
             }
         }
@@ -63,14 +63,19 @@
 
             public class MyMessageHandler : IHandleMessages<MyMessageWithLargePayload>
             {
-                public Context Context { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyMessageWithLargePayload messageWithLargePayload, IMessageHandlerContext context)
                 {
-                    Context.ReceivedPayload = messageWithLargePayload.Payload.Value;
+                    testContext.ReceivedPayload = messageWithLargePayload.Payload.Value;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
 
             public class Mutator : IMutateIncomingTransportMessages

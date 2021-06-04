@@ -4,6 +4,7 @@
     using System.Collections;
     using System.Collections.Generic;
     using System.Threading.Tasks;
+    using NServiceBus;
     using NServiceBus.MessageInterfaces.MessageMapper.Reflection;
     using NUnit.Framework;
 
@@ -46,15 +47,28 @@
             });
         }
 
+#if NETCOREAPP
+#nullable enable
         [Test]
         public void Should_handle_messages_with_nullable_reference_types()
         {
             var mapper = new MessageMapper();
 
-            // Type defined in separate assembly as a workaround
-            // because we can't use nullable refeference types yet
-            mapper.CreateInstance<WithDodgyNullable.IMyMessage>();
+            mapper.CreateInstance<IMessageWithNullableProperties>();
         }
+
+        public interface IMessageWithNullableProperties : ICommand, IMessage
+        {
+            string? NullableString { get; set; }
+            object[]? NullableArray { get; set; }
+            List<NullableComplexTypeItem>? NullableList { get; set; }
+        }
+
+        public class NullableComplexTypeItem
+        {
+        }
+#nullable disable
+#endif
 
         [Test]
         public void CreateInstance_WhenMessageNotInitialized_ShouldBeThreadsafe()
@@ -96,7 +110,7 @@
         {
             var mapper = new MessageMapper();
 
-            var ex = Assert.Throws<Exception>(() => mapper.Initialize(new[] { typeof(InterfaceMessageWithIllegalInterfaceProperty) }));
+            var ex = Assert.Throws<Exception>(() => mapper.Initialize(new[] { typeof(IInterfaceMessageWithIllegalInterfaceProperty) }));
             StringAssert.Contains($"Cannot generate a concrete implementation for '{typeof(IIllegalProperty).FullName}' because it contains methods. Ensure that all interfaces used as messages do not contain methods.", ex.Message);
         }
 
@@ -170,7 +184,7 @@
         {
             var mapper = new MessageMapper();
 
-            var messageInstance = mapper.CreateInstance<MessageInterfaceWithNullablePropertyAttribute>();
+            var messageInstance = mapper.CreateInstance<IMessageInterfaceWithNullablePropertyAttribute>();
 
             Assert.IsNotNull(messageInstance);
         }
@@ -218,7 +232,7 @@
             public IIllegalProperty MyProperty { get; set; }
         }
 
-        public interface InterfaceMessageWithIllegalInterfaceProperty
+        public interface IInterfaceMessageWithIllegalInterfaceProperty
         {
             IIllegalProperty MyProperty { get; set; }
         }
@@ -247,11 +261,12 @@
             }
         }
 
-        public interface MessageInterfaceWithNullablePropertyAttribute
+        public interface IMessageInterfaceWithNullablePropertyAttribute
         {
             [NullableProperty(0)]
             object Value { get; set; }
         }
+
 
     }
 }

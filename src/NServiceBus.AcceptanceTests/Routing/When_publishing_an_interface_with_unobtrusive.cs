@@ -16,10 +16,10 @@
         {
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Publisher>(b =>
-                    b.When(c => c.Subscribed, (session, ctx) => session.Publish<MyEvent>()))
+                    b.When(c => c.Subscribed, (session, ctx) => session.Publish<IMyEvent>()))
                 .WithEndpoint<Subscriber>(b => b.When(async (session, ctx) =>
                 {
-                    await session.Subscribe<MyEvent>();
+                    await session.Subscribe<IMyEvent>();
                     if (ctx.HasNativePubSubSupport)
                     {
                         ctx.Subscribed = true;
@@ -29,7 +29,7 @@
                 .Run();
 
             Assert.True(context.GotTheEvent);
-            Assert.AreEqual(typeof(MyEvent), context.EventTypePassedToRouting);
+            Assert.AreEqual(typeof(IMyEvent), context.EventTypePassedToRouting);
         }
 
         public class Context : ScenarioContext
@@ -54,7 +54,7 @@
                             context.Subscribed = true;
                         }
                     });
-                }).ExcludeType<MyEvent>(); // remove that type from assembly scanning to simulate what would happen with true unobtrusive mode
+                }).ExcludeType<IMyEvent>(); // remove that type from assembly scanning to simulate what would happen with true unobtrusive mode
             }
 
             class EventTypeSpy : IBehavior<IOutgoingLogicalMessageContext, IOutgoingLogicalMessageContext>
@@ -83,22 +83,27 @@
                     c.Conventions().DefiningEventsAs(t => t.Namespace != null && t.Name.EndsWith("Event"));
                     c.DisableFeature<AutoSubscribe>();
                 },
-                metadata => metadata.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
+                metadata => metadata.RegisterPublisherFor<IMyEvent>(typeof(Publisher)));
             }
 
-            public class MyEventHandler : IHandleMessages<MyEvent>
+            public class MyEventHandler : IHandleMessages<IMyEvent>
             {
-                public Context Context { get; set; }
-
-                public Task Handle(MyEvent @event, IMessageHandlerContext context)
+                public MyEventHandler(Context context)
                 {
-                    Context.GotTheEvent = true;
+                    testContext = context;
+                }
+
+                public Task Handle(IMyEvent @event, IMessageHandlerContext context)
+                {
+                    testContext.GotTheEvent = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 
-        public interface MyEvent
+        public interface IMyEvent
         {
         }
     }

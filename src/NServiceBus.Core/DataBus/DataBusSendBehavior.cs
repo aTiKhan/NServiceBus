@@ -5,9 +5,9 @@
     using System.Threading.Tasks;
     using System.Transactions;
     using DataBus;
-    using DeliveryConstraints;
-    using Performance.TimeToBeReceived;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
+    using Transport;
 
     class DataBusSendBehavior : IBehavior<IOutgoingLogicalMessageContext, IOutgoingLogicalMessageContext>
     {
@@ -22,9 +22,9 @@
         {
             var timeToBeReceived = TimeSpan.MaxValue;
 
-            if (context.Extensions.TryGetDeliveryConstraint(out DiscardIfNotReceivedBefore constraint))
+            if (context.Extensions.TryGet<DispatchProperties>(out var properties) && properties.DiscardIfNotReceivedBefore != null)
             {
-                timeToBeReceived = constraint.MaxTime;
+                timeToBeReceived = properties.DiscardIfNotReceivedBefore.MaxTime;
             }
 
             var message = context.Message.Instance;
@@ -54,7 +54,7 @@
 
                     using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
                     {
-                        headerValue = await dataBus.Put(stream, timeToBeReceived).ConfigureAwait(false);
+                        headerValue = await dataBus.Put(stream, timeToBeReceived, context.CancellationToken).ConfigureAwait(false);
                     }
 
                     string headerKey;
@@ -85,7 +85,7 @@
 
         public class Registration : RegisterStep
         {
-            public Registration(Conventions conventions) : base("DataBusSend", typeof(DataBusSendBehavior), "Saves the payload into the shared location", b => new DataBusSendBehavior(b.Build<IDataBus>(), b.Build<IDataBusSerializer>(), conventions))
+            public Registration(Conventions conventions) : base("DataBusSend", typeof(DataBusSendBehavior), "Saves the payload into the shared location", b => new DataBusSendBehavior(b.GetRequiredService<IDataBus>(), b.GetRequiredService<IDataBusSerializer>(), conventions))
             {
                 InsertAfter("MutateOutgoingMessages");
                 InsertAfter("ApplyTimeToBeReceived");

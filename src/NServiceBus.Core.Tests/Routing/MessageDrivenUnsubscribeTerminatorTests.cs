@@ -2,14 +2,15 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using NServiceBus.Routing;
     using NServiceBus.Routing.MessageDrivenSubscriptions;
-    using Transport;
-    using Unicast.Queuing;
     using NUnit.Framework;
     using Testing;
+    using Transport;
+    using Unicast.Queuing;
 
     [TestFixture]
     public class MessageDrivenUnsubscribeTerminatorTests
@@ -22,7 +23,7 @@
         public void SetUp()
         {
             var publishers = new Publishers();
-            publishers.AddOrReplacePublishers("A", new List<PublisherTableEntry> {new PublisherTableEntry(typeof(object), PublisherAddress.CreateFromPhysicalAddresses("publisher1"))});
+            publishers.AddOrReplacePublishers("A", new List<PublisherTableEntry> { new PublisherTableEntry(typeof(object), PublisherAddress.CreateFromPhysicalAddresses("publisher1")) });
             router = new SubscriptionRouter(publishers, new EndpointInstances(), i => i.ToString());
             dispatcher = new FakeDispatcher();
             terminator = new MessageDrivenUnsubscribeTerminator(router, "replyToAddress", "Endpoint", dispatcher);
@@ -31,7 +32,7 @@
         [Test]
         public async Task Should_Dispatch_for_all_publishers()
         {
-            await terminator.Invoke(new TestableUnsubscribeContext(), c => TaskEx.CompletedTask);
+            await terminator.Invoke(new TestableUnsubscribeContext(), c => Task.CompletedTask);
 
             Assert.AreEqual(1, dispatcher.DispatchedTransportOperations.Count);
         }
@@ -50,7 +51,7 @@
                 Extensions = options.Context
             };
 
-            await terminator.Invoke(context, c => TaskEx.CompletedTask);
+            await terminator.Invoke(context, c => Task.CompletedTask);
 
             Assert.AreEqual(1, dispatcher.DispatchedTransportOperations.Count);
             Assert.AreEqual(10, dispatcher.FailedNumberOfTimes);
@@ -70,13 +71,13 @@
                 Extensions = options.Context
             };
 
-            Assert.That(async () => await terminator.Invoke(context, c => TaskEx.CompletedTask), Throws.InstanceOf<QueueNotFoundException>());
+            Assert.That(async () => await terminator.Invoke(context, c => Task.CompletedTask), Throws.InstanceOf<QueueNotFoundException>());
 
             Assert.AreEqual(0, dispatcher.DispatchedTransportOperations.Count);
             Assert.AreEqual(11, dispatcher.FailedNumberOfTimes);
         }
 
-        class FakeDispatcher : IDispatchMessages
+        class FakeDispatcher : IMessageDispatcher
         {
             int? numberOfTimes;
 
@@ -89,7 +90,7 @@
                 numberOfTimes = times;
             }
 
-            public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+            public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
             {
                 if (numberOfTimes.HasValue && FailedNumberOfTimes < numberOfTimes.Value)
                 {
@@ -98,7 +99,7 @@
                 }
 
                 DispatchedTransportOperations.Add(outgoingMessages);
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
     }

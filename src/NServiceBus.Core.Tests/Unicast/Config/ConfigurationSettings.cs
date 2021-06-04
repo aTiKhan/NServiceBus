@@ -34,7 +34,7 @@
         [Test]
         public void Interface_handler_should_not_be_classified_as_a_handler()
         {
-            Assert.IsFalse(ReceiveComponent.IsMessageHandler(typeof(InterfaceHandler)));
+            Assert.IsFalse(ReceiveComponent.IsMessageHandler(typeof(IInterfaceHandler)));
         }
 
         [Test]
@@ -60,7 +60,7 @@
         {
             public Task Handle(SimpleMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -68,7 +68,7 @@
         {
             public Task Handle(SimpleMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -76,7 +76,7 @@
         {
         }
 
-        public interface InterfaceHandler : IHandleMessages<SimpleMessage>
+        public interface IInterfaceHandler : IHandleMessages<SimpleMessage>
         {
         }
 
@@ -88,7 +88,7 @@
         {
             public Task Handle(SimpleMessage message, IMessageHandlerContext context)
             {
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 

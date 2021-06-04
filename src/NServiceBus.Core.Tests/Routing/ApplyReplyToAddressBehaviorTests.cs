@@ -17,7 +17,7 @@
             var options = new SendOptions();
             var context = CreateContext(options);
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.AreEqual("PublicAddress", context.Headers[Headers.ReplyToAddress]);
         }
@@ -39,7 +39,7 @@
             var options = new SendOptions();
             var context = CreateContext(options);
 
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.AreEqual("MyEndpoint", context.Headers[Headers.ReplyToAddress]);
         }
@@ -53,7 +53,7 @@
             options.RouteReplyToAnyInstance();
 
             var context = CreateContext(options);
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.AreEqual("MyEndpoint", context.Headers[Headers.ReplyToAddress]);
         }
@@ -67,7 +67,7 @@
             options.RouteReplyToThisInstance();
 
             var context = CreateContext(options);
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.AreEqual("MyInstance", context.Headers[Headers.ReplyToAddress]);
         }
@@ -81,7 +81,7 @@
             options.RouteReplyTo("Destination");
 
             var context = CreateContext(options);
-            await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
 
             Assert.AreEqual("Destination", context.Headers[Headers.ReplyToAddress]);
         }
@@ -98,10 +98,10 @@
 
             try
             {
-                await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+                await behavior.Invoke(context, ctx => Task.CompletedTask);
                 Assert.Fail("Expected exception");
             }
-            catch (Exception)
+            catch (Exception ex) when (!ex.IsCausedBy(context.CancellationToken))
             {
                 Assert.Pass();
             }
@@ -112,18 +112,19 @@
         {
             var behavior = new ApplyReplyToAddressBehavior("MyEndpoint", "MyInstance", null);
 
+            var options = new SendOptions();
+            var context = CreateContext(options);
+
             try
             {
-                var options = new SendOptions();
-                var context = CreateContext(options);
 
                 options.RouteReplyToAnyInstance();
                 options.RouteReplyToThisInstance();
 
-                await behavior.Invoke(context, ctx => TaskEx.CompletedTask);
+                await behavior.Invoke(context, ctx => Task.CompletedTask);
                 Assert.Fail("Expected exception");
             }
-            catch (Exception)
+            catch (Exception ex) when (!ex.IsCausedBy(context.CancellationToken))
             {
                 Assert.Pass();
             }

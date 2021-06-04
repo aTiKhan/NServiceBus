@@ -1,13 +1,13 @@
 ﻿namespace NServiceBus.Features
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Logging;
-    using ObjectBuilder;
 
     class FeatureStartupTaskController
     {
-        public FeatureStartupTaskController(string name, Func<IBuilder, FeatureStartupTask> factory)
+        public FeatureStartupTaskController(string name, Func<IServiceProvider, FeatureStartupTask> factory)
         {
             Name = name;
             this.factory = factory;
@@ -15,21 +15,26 @@
 
         public string Name { get; }
 
-        public Task Start(IBuilder builder, IMessageSession messageSession)
+        public Task Start(IServiceProvider builder, IMessageSession messageSession, CancellationToken cancellationToken = default)
         {
+            if (Log.IsDebugEnabled)
+            {
+                Log.Debug($"Starting {nameof(FeatureStartupTask)} '{Name}'.");
+            }
+
             instance = factory(builder);
-            return instance.PerformStartup(messageSession);
+            return instance.PerformStartup(messageSession, cancellationToken);
         }
 
-        public async Task Stop()
+        public async Task Stop(CancellationToken cancellationToken = default)
         {
             try
             {
-                await instance.PerformStop().ConfigureAwait(false);
+                await instance.PerformStop(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception exception)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
-                Log.Warn($"Exception occurred during stopping of feature startup task '{Name}'.", exception);
+                Log.Warn($"Exception occurred during stopping of feature startup task '{Name}'.", ex);
             }
             finally
             {
@@ -43,7 +48,7 @@
             disposableTask?.Dispose();
         }
 
-        Func<IBuilder, FeatureStartupTask> factory;
+        Func<IServiceProvider, FeatureStartupTask> factory;
         FeatureStartupTask instance;
 
         static ILog Log = LogManager.GetLogger<FeatureStartupTaskController>();

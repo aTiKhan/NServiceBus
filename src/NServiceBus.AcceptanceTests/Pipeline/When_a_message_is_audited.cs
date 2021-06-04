@@ -37,8 +37,6 @@
                 EndpointSetup<DefaultServer>(c => c.AuditProcessedMessagesTo<AuditSpyEndpoint>());
             }
 
-            public Context Context { get; set; }
-
             public class MessageSentInsideHandlersHandler : IHandleMessages<MessageToBeAudited>
             {
                 public Task Handle(MessageToBeAudited message, IMessageHandlerContext context)
@@ -49,15 +47,20 @@
 
             public class FirstMessageHandler : IHandleMessages<FirstMessage>
             {
-                public Context TestContext { get; set; }
+                public FirstMessageHandler(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(FirstMessage message, IMessageHandlerContext context)
                 {
-                    TestContext.OriginRelatedTo = context.MessageId;
-                    TestContext.OriginConversationId = context.MessageHeaders.ContainsKey(Headers.ConversationId) ? context.MessageHeaders[Headers.ConversationId] : null;
-                    
+                    testContext.OriginRelatedTo = context.MessageId;
+                    testContext.OriginConversationId = context.MessageHeaders.ContainsKey(Headers.ConversationId) ? context.MessageHeaders[Headers.ConversationId] : null;
+
                     return context.SendLocal(new MessageToBeAudited());
                 }
+
+                Context testContext;
             }
         }
 
@@ -70,22 +73,25 @@
 
             public class MessageToBeAuditedHandler : IHandleMessages<MessageToBeAudited>
             {
-                public Context TestContext { get; set; }
+                public MessageToBeAuditedHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MessageToBeAudited message, IMessageHandlerContext context)
                 {
-                    TestContext.RelatedTo = context.MessageHeaders.ContainsKey(Headers.RelatedTo) ? context.MessageHeaders[Headers.RelatedTo] : null;
-                    TestContext.ConversationId = context.MessageHeaders.ContainsKey(Headers.ConversationId) ? context.MessageHeaders[Headers.ConversationId] : null;
-                    TestContext.Done = true;
+                    testContext.RelatedTo = context.MessageHeaders.ContainsKey(Headers.RelatedTo) ? context.MessageHeaders[Headers.RelatedTo] : null;
+                    testContext.ConversationId = context.MessageHeaders.ContainsKey(Headers.ConversationId) ? context.MessageHeaders[Headers.ConversationId] : null;
+                    testContext.Done = true;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
 
             public class FirstMessageHandler : IHandleMessages<FirstMessage>
             {
-                public Context TestContext { get; set; }
-
                 public Task Handle(FirstMessage message, IMessageHandlerContext context)
                 {
                     return Task.FromResult(0);

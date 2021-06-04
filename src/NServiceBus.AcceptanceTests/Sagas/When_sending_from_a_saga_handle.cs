@@ -4,7 +4,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     public class When_sending_from_a_saga_handle : NServiceBusAcceptanceTest
@@ -32,7 +31,7 @@
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(config => config.EnableFeature<TimeoutManager>());
+                EndpointSetup<DefaultServer>();
             }
 
             public class TwoSaga1Saga1 : Saga<TwoSaga1Saga1Data>, IAmStartedByMessages<StartSaga1>, IHandleMessages<MessageSaga1WillHandle>
@@ -69,12 +68,15 @@
 
             public class TwoSaga1Saga2 : Saga<TwoSaga1Saga2.TwoSaga1Saga2Data>, IAmStartedByMessages<StartSaga2>
             {
-                public Context Context { get; set; }
+                public TwoSaga1Saga2(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(StartSaga2 message, IMessageHandlerContext context)
                 {
                     Data.DataId = message.DataId;
-                    Context.DidSaga2ReceiveMessage = true;
+                    testContext.DidSaga2ReceiveMessage = true;
 
                     return Task.FromResult(0);
                 }
@@ -88,6 +90,8 @@
                 {
                     public virtual Guid DataId { get; set; }
                 }
+
+                Context testContext;
             }
         }
 

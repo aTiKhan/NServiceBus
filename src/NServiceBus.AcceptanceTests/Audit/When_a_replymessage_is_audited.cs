@@ -67,20 +67,25 @@
                 {
                     c.DisableFeature<Outbox>();
                     c.AuditProcessedMessagesTo<AuditSpyEndpoint>();
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(Request), typeof(Server));
+                    c.ConfigureRouting().RouteToEndpoint(typeof(Request), typeof(Server));
                 });
             }
 
             public class MessageToBeAuditedHandler : IHandleMessages<ResponseToBeAudited>
             {
-                public Context TestContext { get; set; }
+                public MessageToBeAuditedHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(ResponseToBeAudited message, IMessageHandlerContext context)
                 {
-                    TestContext.HeaderValue = context.MessageHeaders["MyHeader"];
-                    TestContext.MessageProcessed = true;
+                    testContext.HeaderValue = context.MessageHeaders["MyHeader"];
+                    testContext.MessageProcessed = true;
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

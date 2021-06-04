@@ -5,7 +5,6 @@
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
     using EndpointTemplates;
-    using Features;
     using NUnit.Framework;
 
     // Repro for issue  https://github.com/NServiceBus/NServiceBus/issues/1277 to test the fix
@@ -59,8 +58,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.EnableFeature<TimeoutManager>();
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(DoSomething), typeof(EndpointThatRepliesToSagaMessage));
+                    c.ConfigureRouting().RouteToEndpoint(typeof(DoSomething), typeof(EndpointThatRepliesToSagaMessage));
                 });
             }
 
@@ -68,7 +66,10 @@
                 IAmStartedByMessages<StartSaga>,
                 IHandleMessages<DoSomethingResponse>
             {
-                public Context TestContext { get; set; }
+                public CorrelationTestSaga(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(StartSaga message, IMessageHandlerContext context)
                 {
@@ -80,8 +81,8 @@
 
                 public Task Handle(DoSomethingResponse message, IMessageHandlerContext context)
                 {
-                    TestContext.Done = true;
-                    TestContext.ResponseRunId = message.RunId;
+                    testContext.Done = true;
+                    testContext.ResponseRunId = message.RunId;
                     MarkAsComplete();
                     return Task.FromResult(0);
                 }
@@ -96,6 +97,8 @@
                 {
                     public virtual Guid RunId { get; set; }
                 }
+
+                Context testContext;
             }
         }
 

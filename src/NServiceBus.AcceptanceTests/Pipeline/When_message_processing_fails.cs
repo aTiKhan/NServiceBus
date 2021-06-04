@@ -38,9 +38,9 @@
             {
                 EndpointSetup<DefaultServer>((c, r) =>
                 {
-                    c.Recoverability().Failed(settings => settings.OnMessageSentToErrorQueue(failure =>
+                    c.Recoverability().Failed(settings => settings.OnMessageSentToErrorQueue((failure, _) =>
                     {
-                        var testContext = ((Context)r.ScenarioContext);
+                        var testContext = (Context)r.ScenarioContext;
                         testContext.MessageFailed = true;
                         testContext.Exception = failure.Exception;
                         return Task.FromResult(0);
@@ -59,7 +59,7 @@
 
         public class FailingMessage : IMessage
         {
-            
+
         }
     }
 }

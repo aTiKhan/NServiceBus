@@ -59,7 +59,7 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     c.AddHeaderToAllOutgoingMessages("MyStaticHeader", "StaticHeaderValue");
-                    c.ConfigureTransport().Routing().RouteToEndpoint(typeof(MyMessage), typeof(Receiver));
+                    c.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), typeof(Receiver));
                 });
             }
         }
@@ -73,25 +73,30 @@
 
             public class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                public Context TestContext { get; set; }
+                public MyMessageHandler(Context context)
+                {
+                    testContext = context;
+                }
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
                 {
-                    if (TestContext.Id != message.Id)
+                    if (testContext.Id != message.Id)
                     {
                         return Task.FromResult(0);
                     }
 
-                    TestContext.TimesCalled++;
-                    TestContext.MyMessageId = context.MessageId;
-                    TestContext.MyHeader = context.MessageHeaders["MyHeader"];
+                    testContext.TimesCalled++;
+                    testContext.MyMessageId = context.MessageId;
+                    testContext.MyHeader = context.MessageHeaders["MyHeader"];
 
-                    TestContext.ReceivedHeaders = context.MessageHeaders.ToDictionary(x => x.Key, x => x.Value);
+                    testContext.ReceivedHeaders = context.MessageHeaders.ToDictionary(x => x.Key, x => x.Value);
 
-                    TestContext.WasCalled = true;
+                    testContext.WasCalled = true;
 
                     return Task.FromResult(0);
                 }
+
+                Context testContext;
             }
         }
 

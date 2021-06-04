@@ -1,11 +1,15 @@
-﻿namespace NServiceBus.Core.Tests.Routing.MessageDrivenSubscriptions
+﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace NServiceBus.Core.Tests.Routing.MessageDrivenSubscriptions
 {
-    using NServiceBus;
     using System;
     using System.Linq;
     using System.Reflection;
     using EventNamespace;
     using MessageNamespace;
+    using NServiceBus;
     using NServiceBus.Routing;
     using NServiceBus.Routing.MessageDrivenSubscriptions;
     using NUnit.Framework;
@@ -157,9 +161,22 @@
 
     public class MessageDrivenTransportDefinition : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
-        public override string ExampleConnectionStringForErrorMessage { get; }
+        public MessageDrivenTransportDefinition(TransportTransactionMode defaultTransactionMode)
+            : base(defaultTransactionMode, false, false, false)
+        {
+        }
 
-        public override TransportInfrastructure Initialize(SettingsHolder settings, string connectionString)
+        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override string ToTransportAddress(QueueAddress address)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes()
         {
             throw new NotImplementedException();
         }

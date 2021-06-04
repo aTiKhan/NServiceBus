@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
     using System.Transactions;
     using DataBus;
+    using Microsoft.Extensions.DependencyInjection;
     using Pipeline;
 
     class DataBusReceiveBehavior : IBehavior<IIncomingLogicalMessageContext, IIncomingLogicalMessageContext>
@@ -42,7 +43,7 @@
 
                 using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
                 {
-                    using (var stream = await dataBus.Get(dataBusKey).ConfigureAwait(false))
+                    using (var stream = await dataBus.Get(dataBusKey, context.CancellationToken).ConfigureAwait(false))
                     {
                         var value = dataBusSerializer.Deserialize(stream);
 
@@ -67,7 +68,7 @@
 
         public class Registration : RegisterStep
         {
-            public Registration(Conventions conventions) : base("DataBusReceive", typeof(DataBusReceiveBehavior), "Copies the databus shared data back to the logical message", b => new DataBusReceiveBehavior(b.Build<IDataBus>(), b.Build<IDataBusSerializer>(), conventions))
+            public Registration(Conventions conventions) : base("DataBusReceive", typeof(DataBusReceiveBehavior), "Copies the databus shared data back to the logical message", b => new DataBusReceiveBehavior(b.GetRequiredService<IDataBus>(), b.GetRequiredService<IDataBusSerializer>(), conventions))
             {
                 InsertAfter("MutateIncomingMessages");
             }

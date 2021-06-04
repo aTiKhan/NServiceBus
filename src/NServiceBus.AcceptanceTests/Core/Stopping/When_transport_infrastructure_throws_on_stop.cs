@@ -19,9 +19,9 @@
                 .Done(c => c.EndpointsStarted)
                 .Run();
 
-            var logItem = context.Logs.FirstOrDefault(item => item.Message.Contains("shutdown") && item.Level == LogLevel.Warn);
+            var logItem = context.Logs.FirstOrDefault(item => item.Message.Contains("Shutdown of the transport") && item.Level == LogLevel.Error);
             Assert.IsNotNull(logItem);
-            StringAssert.Contains("Exception occurred during shutdown of the transport. System.InvalidOperationException: ExceptionInInfrastructureStop", logItem.Message);
+            StringAssert.Contains("Shutdown of the transport infrastructure failed. System.InvalidOperationException: ExceptionInInfrastructureStop", logItem.Message);
         }
 
         public class EndpointThatThrowsOnInfrastructureStop : EndpointConfigurationBuilder
@@ -30,8 +30,9 @@
             {
                 EndpointSetup<DefaultServer>(builder =>
                 {
-                    builder.UseTransport<FakeTransport>()
-                        .RaiseExceptionDuringInfrastructureStop(new InvalidOperationException("ExceptionInInfrastructureStop"));
+                    var fakeTransport = new FakeTransport();
+                    fakeTransport.RaiseExceptionOnTransportDispose(new InvalidOperationException("ExceptionInInfrastructureStop"));
+                    builder.UseTransport(fakeTransport);
                 });
             }
         }

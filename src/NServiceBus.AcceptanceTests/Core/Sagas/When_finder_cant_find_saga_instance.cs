@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.AcceptanceTests.Core.Sagas
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using EndpointTemplates;
@@ -37,33 +38,41 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     //use InMemoryPersistence as custom finder support is required
-                    c.UsePersistence<InMemoryPersistence>();
+                    c.UsePersistence<AcceptanceTestingPersistence>();
                 });
             }
 
             class CustomFinder : IFindSagas<TestSaga06.SagaData06>.Using<StartSagaMessage>
             {
-                public Context Context { get; set; }
-
-                public Task<TestSaga06.SagaData06> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context)
+                public CustomFinder(Context testContext)
                 {
-                    Context.FinderUsed = true;
+                    this.testContext = testContext;
+                }
+
+                public Task<TestSaga06.SagaData06> FindBy(StartSagaMessage message, SynchronizedStorageSession storageSession, ReadOnlyContextBag context, CancellationToken cancellationToken = default)
+                {
+                    testContext.FinderUsed = true;
                     return Task.FromResult(default(TestSaga06.SagaData06));
                 }
+
+                Context testContext;
             }
 
-            public class TestSaga06 : Saga<TestSaga06.SagaData06>, 
+            public class TestSaga06 : Saga<TestSaga06.SagaData06>,
                 IAmStartedByMessages<StartSagaMessage>,
                 IHandleMessages<SomeOtherMessage>
             {
-                public Context Context { get; set; }
+                public TestSaga06(Context testContext)
+                {
+                    this.testContext = testContext;
+                }
 
                 public Task Handle(StartSagaMessage message, IMessageHandlerContext context)
                 {
                     // need to set the correlation property manually because the finder doesn't return an existing instance
                     Data.CorrelationProperty = "some value";
 
-                    Context.SagaStarted = true;
+                    testContext.SagaStarted = true;
                     return Task.FromResult(0);
                 }
 
@@ -73,16 +82,18 @@
                     mapper.ConfigureMapping<SomeOtherMessage>(m => m.CorrelationProperty).ToSaga(s => s.CorrelationProperty);
                 }
 
-                public class SagaData06 : ContainSagaData
-                {
-                    public virtual string CorrelationProperty { get; set; }
-                }
-
                 // This additional, unused, message is required to reprododuce https://github.com/Particular/NServiceBus/issues/4888
                 public Task Handle(SomeOtherMessage message, IMessageHandlerContext context)
                 {
                     return Task.FromResult(0);
                 }
+
+                public class SagaData06 : ContainSagaData
+                {
+                    public virtual string CorrelationProperty { get; set; }
+                }
+
+                Context testContext;
             }
         }
 
